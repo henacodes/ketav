@@ -1,7 +1,5 @@
+import { loadEpubMetadata } from "epubix";
+
 export type SupportedEbooks = "epub";
 
-export interface LibraryEpub {
-  coverImage: string | null;
-  name: string;
-  type: SupportedEbooks;
-}
+export type LibraryEpub = Awaited<ReturnType<typeof loadEpubMetadata>>;
