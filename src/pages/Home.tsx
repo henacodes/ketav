@@ -1,13 +1,77 @@
 "use client";
-import { useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Bookmark, Type } from "lucide-react";
+import { useReaderStore } from "@/stores/useReaderStore";
+import type { TocEntry, EpubChapter } from "epubix";
+import { filterTocByChapters } from "@/lib/helpers/epub";
+import parse, { domToReact, Element } from "html-react-parser";
 
 export function HomePage() {
   const [fontSize, setFontSize] = useState(18);
+  const [tableOfContents, setTableOfContents] = useState<TocEntry[]>([]);
+
+  const { openBook, openChapterHref, setOpenChapterHref } = useReaderStore();
+
+  const headingSizes: Record<string, string> = {
+    h1: "text-4xl",
+    h2: "text-3xl",
+    h3: "text-2xl",
+    h4: "text-xl",
+    h5: "text-lg",
+    h6: "text-base",
+  };
+
+  const paragraphClasses = [
+    "font-serif",
+    "leading-relaxed",
+    "mb-6",
+    "text-foreground",
+  ];
+
+  const openChapter = useMemo(() => {
+    if (!openBook || !openChapterHref) return null;
+    return openBook.book.chapters.find((c) => c.href === openChapterHref);
+  }, [openBook, openChapterHref]);
+  const transformedHtml = useMemo(() => {
+    if (!openChapter) return "";
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(openChapter.content, "text/html");
+
+    // Add paragraph classes
+    doc
+      .querySelectorAll("p")
+      .forEach((p) => p.classList.add(...paragraphClasses));
+
+    // Add heading classes
+    Object.entries(headingSizes).forEach(([tag, size]) => {
+      doc.querySelectorAll(tag).forEach((el) => {
+        el.classList.add(
+          "font-serif",
+          "font-bold",
+          "mb-2",
+          "text-foreground",
+          size
+        );
+      });
+    });
+
+    return doc.body.innerHTML;
+  }, [openChapter]);
+
+  useEffect(() => {
+    if (!openBook) return;
+
+    const toc = filterTocByChapters(openBook.book.toc, openBook.book.chapters);
+    setTableOfContents(toc);
+    console.log("TOCCCCCCCCCCCCCC");
+    setOpenChapterHref(toc[0].href);
+  }, [openBook]);
 
   return (
     <div className="flex flex-col h-full">
+      {/* Reading Controls */}
       <div className="flex items-center justify-between px-8 py-4 border-b border-border bg-card">
         <div className="flex items-center gap-2">
           <Button
@@ -51,84 +115,68 @@ export function HomePage() {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-3xl mx-auto px-8 py-12">
-          <h1 className="font-serif text-4xl font-bold mb-2 text-foreground">
-            The Art of Reading
-          </h1>
-          <p className="text-primary text-sm mb-8">Chapter 1</p>
-
-          <div
-            className="font-serif leading-relaxed space-y-6 text-foreground"
-            style={{ fontSize: `${fontSize}px` }}
-          >
-            <p className="first-letter:text-6xl first-letter:font-bold first-letter:text-primary first-letter:mr-2 first-letter:float-left">
-              In the quiet hours of the evening, when the world settles into a
-              gentle rhythm, there exists a sacred space between the reader and
-              the page. This space is not merely physical, but a realm of
-              infinite possibility where words transform into worlds, and
-              sentences become doorways to understanding.
-            </p>
-
-            <p>
-              The act of reading is, at its core, an intimate conversation
-              across time and space. An author, perhaps long departed, speaks
-              directly to you through carefully chosen words. Each sentence is a
-              gift, wrapped in the delicate paper of language, waiting to be
-              unwrapped by an attentive mind.
-            </p>
-
-            <p>
-              Consider the weight of a book in your hands—not just its physical
-              mass, but the accumulated wisdom, imagination, and effort it
-              represents. Thousands of hours of thought, revision, and craft
-              have been distilled into these pages. The reader's task is to
-              honor this effort with presence and attention.
-            </p>
-
-            <p>
-              In our modern age of constant distraction, the simple act of
-              sustained reading becomes almost revolutionary. To sit with a book
-              for an hour, to follow a single thread of thought without
-              interruption, is to reclaim a piece of our humanity that
-              technology threatens to fragment.
-            </p>
-
-            <p>
-              The best readers are not passive consumers but active participants
-              in the creation of meaning. They bring their own experiences,
-              questions, and insights to the text, creating a unique
-              interpretation that belongs to them alone. No two people read the
-              same book in quite the same way.
-            </p>
-
-            <p>
-              This is the magic of reading: it is both solitary and communal,
-              ancient and ever-new. Each time we open a book, we join a
-              conversation that spans centuries, connecting us to minds both
-              familiar and foreign, challenging us to grow beyond the boundaries
-              of our own experience.
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between mt-16 pt-8 border-t border-border">
-            <Button
-              variant="ghost"
-              className="text-muted-foreground hover:text-foreground"
+      <div className="flex-1 overflow-auto flex">
+        {/* Main Book Content */}
+        <div className="flex-1 overflow-auto">
+          <div className="max-w-3xl mx-auto px-8 py-12">
+            <div
+              className="font-serif leading-relaxed space-y-6 text-foreground"
+              style={{ fontSize: `${fontSize}px` }}
             >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">Page 1 of 247</span>
-            <Button
-              variant="ghost"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Next
-              <ChevronRight className="w-4 h-4 ml-2" />
-            </Button>
+              <div dangerouslySetInnerHTML={{ __html: transformedHtml }} />
+            </div>
+            {/* Page Navigation */}
+            <div className="flex items-center justify-between mt-16 pt-8 border-t border-border">
+              <Button
+                variant="ghost"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page 1 of 247
+              </span>
+              <Button
+                variant="ghost"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
           </div>
         </div>
+        {/* Table of Contents Sidebar */}
+        <aside className="w-72 border-l border-border bg-card overflow-auto">
+          <div className="sticky top-0 bg-card border-b border-border px-6 py-4">
+            <h2 className="text-sm font-semibold text-foreground">
+              Table of Contents
+            </h2>
+          </div>
+          <nav className="p-4 space-y-1">
+            {tableOfContents.map((content) => (
+              <button
+                onClick={() => {
+                  const cleanHref = content.href.split("#")[0];
+                  setOpenChapterHref(cleanHref);
+                }}
+                key={content.href}
+                className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
+                  openChapterHref === content.href
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {/* */}
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-sm leading-snug">{content.title}</span>
+                  <span className="text-xs mt-0.5 shrink-0">2</span>
+                </div>
+              </button>
+            ))}
+          </nav>
+        </aside>
       </div>
     </div>
   );

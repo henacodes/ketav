@@ -7,15 +7,22 @@ import useSettingsStore from "@/stores/useSettingsStore";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Clock, CheckCircle2 } from "lucide-react";
-import { Spinner } from "@/components/ui/spinner";
 import { BookCardSkeleton } from "@/components/BookCardSkeleton";
+import { useReaderStore } from "@/stores/useReaderStore";
+import { useNavigate } from "react-router";
 
 export function LibraryPage() {
+  const navigate = useNavigate();
+
   const [libraryBooks, setLibraryBooks] = useState<LibraryEpub[]>([]);
-
   const [loading, setLoading] = useState(false);
-
   const { settings, fetchSettings } = useSettingsStore((state) => state);
+  const setOpenBook = useReaderStore((state) => state.setOpenBook);
+
+  function handleOpenBook(epubMetadata: LibraryEpub) {
+    setOpenBook(epubMetadata);
+    navigate("/");
+  }
 
   useEffect(() => {
     fetchSettings();
@@ -112,7 +119,12 @@ export function LibraryPage() {
                 )}
                 */}
 
-              <Button variant="outline" size="sm" className="w-full">
+              <Button
+                onClick={() => handleOpenBook(book)}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
                 {/* Progress / reading status commented for now */}
                 {/*
                   {book.progress === 100 ? (
