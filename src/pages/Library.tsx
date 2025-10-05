@@ -4,7 +4,6 @@ import { readDir, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { collectEpubs, filterEpubFiles } from "@/lib/helpers/epub";
 import type { LibraryEpub } from "@/lib/types/epub";
 import useSettingsStore from "@/stores/useSettingsStore";
-import { EpubMetadata } from "epubix";
 
 export function LibraryPage() {
   const [libraryBooks, setLibraryBooks] = useState<LibraryEpub[]>([]);
