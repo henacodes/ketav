@@ -36,7 +36,7 @@ export default function RootLayout() {
             <div className="flex items-center gap-2">
               <BookOpen className="w-6 h-6 text-primary" />
               <h1 className="text-xl font-semibold text-sidebar-foreground">
-                Reader
+                Ketav
               </h1>
             </div>
             <Button
