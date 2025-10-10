@@ -10,6 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.15",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
@@ -22,8 +23,10 @@
     "@tauri-apps/plugin-store": "^2.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "epubix": "^0.2.2",
-    "html-react-parser": "^5.2.6",
+    "dompurify": "^3.2.7",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.44.6",
+    "epubix": "^0.2.4",
     "jszip": "^3.10.1",
     "lucide-react": "^0.544.0",
     "react": "^19.1.0",

@@ -51,13 +51,13 @@ export function LibraryPage() {
   }, [fetchSettings, settings?.libraryFolderPath]);
 
   return (
-    <div className="max-w-6xl  p-8">
+    <div className="  p-8">
       <h1 className="text-3xl font-bold mb-2 text-foreground">My Library</h1>
       <p className="text-muted-foreground mb-8">Your personal collection</p>
       {libraryBooks.length === 0 && !loading && (
         <p className="text-gray-500">No books found in your library.</p>
       )}
-      <div className="grid mt-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid mt-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6  gap-6 w-full  ">
         {loading && (
           <>
             {[...Array(4)].map((_, i) => (
@@ -150,7 +150,6 @@ export function LibraryPage() {
           </Card>
         ))}
       </div>
-      )
     </div>
   );
 }
