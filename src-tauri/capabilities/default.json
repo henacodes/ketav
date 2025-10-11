@@ -2,9 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "core:default",
     "opener:default",
@@ -25,7 +23,12 @@
         }
       ]
     },
+    "fs:allow-resource-read-recursive",
+    "fs:allow-resource-write-recursive",
+    "fs:scope-resource-recursive",
     "store:default",
-    "dialog:default"
+    "dialog:default",
+    "sql:default",
+    "sql:allow-execute"
   ]
 }

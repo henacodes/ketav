@@ -26,3 +26,7 @@ tauri-plugin-fs = "2"
 tauri-plugin-store = "2"
 tauri-plugin-dialog = "2"
 
+[dependencies.tauri-plugin-sql]
+git = "https://github.com/tauri-apps/plugins-workspace"
+branch = "v2"
+features = ["sqlite"]
