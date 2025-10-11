@@ -1,5 +1,4 @@
 import EpubReader from "@/components/EpubReader";
-import { Button } from "@/components/ui/button";
 import { useReaderStore } from "@/stores/useReaderStore";
 import { useEffect } from "react";
 import { Link } from "react-router";

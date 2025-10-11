@@ -1,6 +1,5 @@
 import { eq, and } from "drizzle-orm";
 import { dailyBookStats, dailyUserStats } from "@/db/schema/stats";
-import { drizzle } from "drizzle-orm/sqlite-proxy";
 import { db } from "..";
 
 

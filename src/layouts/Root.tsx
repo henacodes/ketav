@@ -1,3 +1,4 @@
+import { ThemeProvider } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -24,7 +25,8 @@ export default function RootLayout() {
   ];
 
   return (
-    <main className="flex-1 flex flex-col">
+   <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme" >
+     <main className="flex-1 flex flex-col">
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out",
@@ -110,5 +112,6 @@ export default function RootLayout() {
 
       <Outlet />
     </main>
+   </ThemeProvider>
   );
 }

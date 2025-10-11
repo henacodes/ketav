@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import  { useEffect, useMemo, useRef, useState } from "react";
 import type { Epub, TocEntry } from "epubix";
 import { Button } from "./ui/button";
 import { Bookmark } from "lucide-react";
@@ -16,7 +16,6 @@ export default function EpubReader({ epub }: ReaderProps) {
 
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [loading, setLoading] = useState(false);
 
   const [fontSize, setFontSize] = useState(18);
 
@@ -43,7 +42,6 @@ export default function EpubReader({ epub }: ReaderProps) {
   // load content for a given href (may include fragment)
   async function loadContentForHref(href: string | null) {
     if (!href) return;
-    setLoading(true);
     try {
       const result = epub.getChapterByHref(href) || {};
       const chapter = result.chapter;
@@ -80,7 +78,6 @@ export default function EpubReader({ epub }: ReaderProps) {
         if (contentRef.current) contentRef.current.scrollTop = 0;
       }
     } finally {
-      setLoading(false);
     }
   }
 
@@ -133,13 +130,7 @@ export default function EpubReader({ epub }: ReaderProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHref]);
 
-  async function goToChapterByIndex(index: number) {
-    if (!epub.chapters || index < 0 || index >= epub.chapters.length) return;
-    const chapter = epub.chapters[index];
-    if (!chapter) return;
-    const href = chapter.href || chapter.id || undefined;
-    if (href) setSelectedHref(href);
-  }
+
 
   // FIXME: nested table of contents render twice
   function renderToc(

@@ -1,5 +1,5 @@
 import { DirEntry } from "@tauri-apps/plugin-fs";
-import { loadEpubMetadata, type TocEntry, type EpubChapter } from "epubix";
+import { loadEpubMetadata } from "epubix";
 import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { getSettings } from "./settings";
 import type { LibraryEpub } from "../types/epub";

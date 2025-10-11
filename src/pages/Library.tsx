@@ -6,7 +6,6 @@ import useSettingsStore from "@/stores/useSettingsStore";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, CheckCircle2 } from "lucide-react";
 import { BookCardSkeleton } from "@/components/BookCardSkeleton";
 import { useReaderStore } from "@/stores/useReaderStore";
 import { useNavigate } from "react-router";
