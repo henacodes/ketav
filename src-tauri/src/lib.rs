@@ -15,6 +15,18 @@ pub fn run() {
             sql: include_str!("../migrations/0000_wealthy_hiroim.sql"),
             kind: MigrationKind::Up,
         },
+         Migration {
+            version: 2,
+            description: "book_id_in_daily_stats_is_string",
+            sql: include_str!("../migrations/0001_skinny_dark_beast.sql"),
+            kind: MigrationKind::Up,
+        },
+          Migration {
+            version: 3,
+            description: "remove_user_id_column",
+            sql: include_str!("../migrations/0002_clever_tombstone.sql"),
+            kind: MigrationKind::Up,
+        },
 
        
     ];

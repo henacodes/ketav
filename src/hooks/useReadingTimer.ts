@@ -1,20 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { format } from "date-fns";
+import { db } from "@/db/";
+import { dailyBookStats } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { updateBookStats, updateDailyUserStats } from "@/db/services/stats.services";
 
 interface ReadingTrackerOptions {
   bookId: string;
-
 }
 
-export function useReadingTracker({   }: ReadingTrackerOptions) {
+export function useReadingTracker({ bookId }: ReadingTrackerOptions) {
   const [isActive, setIsActive] = useState(true);
   const [minutesRead, setMinutesRead] = useState(0);
   const lastActivityRef = useRef(Date.now());
   const intervalRef = useRef<number | null>(null);
   const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes
 
-  // Detect user activity
+
+
+  // 🧠 detect user activity
   useEffect(() => {
     const updateActivity = () => {
       lastActivityRef.current = Date.now();
@@ -32,11 +37,10 @@ export function useReadingTracker({   }: ReadingTrackerOptions) {
     };
   }, [isActive]);
 
-  // Detect window focus/blur
+  // 🪟 handle focus / blur events
   useEffect(() => {
     async function handleFocusEvents() {
       await listen("tauri://focus", () => {
-        console.log("Window focused, resuming timer");
         setIsActive(true);
         lastActivityRef.current = Date.now();
       });
@@ -50,12 +54,11 @@ export function useReadingTracker({   }: ReadingTrackerOptions) {
     handleFocusEvents();
   }, []);
 
-  // Timer logic
+  // ⏱️ main timer
   useEffect(() => {
     intervalRef.current = window.setInterval(async () => {
       const now = Date.now();
       const inactiveTooLong = now - lastActivityRef.current > INACTIVITY_LIMIT;
-
       if (!isActive || inactiveTooLong) return;
 
       setMinutesRead((prev) => prev + 1);
@@ -67,13 +70,16 @@ export function useReadingTracker({   }: ReadingTrackerOptions) {
     };
   }, [isActive]);
 
+  // 💾 Update daily reading stats in DB
   async function updateStats(minutesIncrement: number) {
-    const day = format(new Date(), "yyyy-mm-dd");
-    const now = Date.now();
+  
+    const day = format(new Date(), "yyyy-MM-dd");
 
-    //update db 
+    console.log("HEARBEBAT SAVED")
+    await updateBookStats(minutesIncrement, bookId, day)
+    await updateDailyUserStats(minutesIncrement, day)
 
-    console.log("SAVE TO DB")
+    console.log(`[DB] Updated ${bookId} for ${day} (+${minutesIncrement} min)`); 
   }
 
   return { minutesRead, isActive };
