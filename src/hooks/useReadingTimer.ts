@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { format } from "date-fns";
-import { db } from "@/db/";
-import { dailyBookStats } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { updateBookStats, updateDailyUserStats } from "@/db/services/stats.services";
 
 interface ReadingTrackerOptions {
@@ -37,22 +34,31 @@ export function useReadingTracker({ bookId }: ReadingTrackerOptions) {
     };
   }, [isActive]);
 
-  // 🪟 handle focus / blur events
-  useEffect(() => {
-    async function handleFocusEvents() {
-      await listen("tauri://focus", () => {
-        setIsActive(true);
-        lastActivityRef.current = Date.now();
-      });
+useEffect(() => {
+  let unlistenFocus: (() => void) | null = null;
+  let unlistenBlur: (() => void) | null = null;
 
-      await listen("tauri://blur", () => {
-        console.log("Window lost focus, pausing timer");
-        setIsActive(false);
-      });
-    }
+  async function handleFocusEvents() {
+    unlistenFocus = await listen("tauri://focus", () => {
+      console.log("FOCUSING AGAIN");
+      setIsActive(true);
+      lastActivityRef.current = Date.now();
+    });
 
-    handleFocusEvents();
-  }, []);
+    unlistenBlur = await listen("tauri://blur", () => {
+      console.log("Window lost focus, pausing timer");
+      setIsActive(false);
+    });
+  }
+
+  handleFocusEvents();
+
+  // 🧹 Cleanup to avoid multiple listeners
+  return () => {
+    if (unlistenFocus) unlistenFocus();
+    if (unlistenBlur) unlistenBlur();
+  };
+}, []);
 
   // ⏱️ main timer
   useEffect(() => {
@@ -62,6 +68,7 @@ export function useReadingTracker({ bookId }: ReadingTrackerOptions) {
       if (!isActive || inactiveTooLong) return;
 
       setMinutesRead((prev) => prev + 1);
+      console.log("isActiveisActive", isActive)
       await updateStats(1); // +1 minute
     }, 60 * 1000);
 
@@ -70,7 +77,6 @@ export function useReadingTracker({ bookId }: ReadingTrackerOptions) {
     };
   }, [isActive]);
 
-  // 💾 Update daily reading stats in DB
   async function updateStats(minutesIncrement: number) {
   
     const day = format(new Date(), "yyyy-MM-dd");
