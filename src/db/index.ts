@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import Database from "@tauri-apps/plugin-sql";
 import * as schema from "./schema";
+import { DATABASE_NAME } from "@/lib/constants";
 
 /**
  * Represents the result of a SELECT query.
@@ -15,7 +16,11 @@ export type SelectQueryResult = {
 // export const sqlite = await Database.load("sqlite:test.db");
 
 export async function getDb() {
-  return await Database.load("sqlite:ketav.db");
+  let db = await Database.load(`sqlite:${DATABASE_NAME}`);
+  await db.execute("PRAGMA database_list");
+  const result = await db.select("PRAGMA database_list");
+  console.log(result);
+  return db;
 }
 
 /**
@@ -25,6 +30,8 @@ export const db = drizzle<typeof schema>(
   async (sql, params, method) => {
     const sqlite = await getDb();
     console.log("GOT THE DB", sqlite);
+    const res = await sqlite.select("SELECT * from books");
+    console.log("EXISTING BOOKS", res);
     let rows: any = [];
     let results = [];
 
@@ -37,6 +44,7 @@ export const db = drizzle<typeof schema>(
     } else {
       // Otherwise, use the execute method
       rows = await sqlite.execute(sql, params).catch((e) => {
+        console.log("SQL", sql, params);
         console.error("SQL Error:", e);
         return [];
       });

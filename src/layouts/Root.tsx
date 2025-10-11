@@ -88,7 +88,7 @@ export default function RootLayout() {
         />
       )}
 
-      <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
+      <header className="flex h-[7vh] items-center justify-between px-6 py-4 border-b border-border bg-card">
         <Button
           variant="ghost"
           size="icon"

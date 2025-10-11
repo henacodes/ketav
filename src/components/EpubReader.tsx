@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Epub, TocEntry } from "epubix";
 import { Button } from "./ui/button";
 import { Bookmark } from "lucide-react";
+import { useReadingTracker } from "@/hooks/useReadingTimer";
+import { generateBookId } from "@/lib/helpers/epub";
 
 interface ReaderProps {
   epub: Epub;
@@ -10,9 +12,7 @@ interface ReaderProps {
 export default function EpubReader({ epub }: ReaderProps) {
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
   const [htmlContent, setHtmlContent] = useState<string>("<div />");
-  const [currentTitle, setCurrentTitle] = useState<string | undefined>(
-    undefined,
-  );
+  useReadingTracker({ bookId:generateBookId(epub) });
 
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -40,17 +40,6 @@ export default function EpubReader({ epub }: ReaderProps) {
     return findFirstHref(epub.toc) || null;
   }, [epub]);
 
-  // resolve chapter index for prev/next
-  const currentChapterIndex = useMemo(() => {
-    if (!selectedHref) return undefined;
-    try {
-      const r = epub.resolveHref(selectedHref);
-      return typeof r.chapterIndex === "number" ? r.chapterIndex : undefined;
-    } catch {
-      return undefined;
-    }
-  }, [selectedHref, epub]);
-
   // load content for a given href (may include fragment)
   async function loadContentForHref(href: string | null) {
     if (!href) return;
@@ -77,11 +66,12 @@ export default function EpubReader({ epub }: ReaderProps) {
       }
 
       if (!content) {
-        content = `<div class="text-muted-foreground"><em>Unable to load content for ${escapeHtml(href)}</em></div>`;
+        content = `<div class="text-muted-foreground"><em>Unable to load content for ${escapeHtml(
+          href
+        )}</em></div>`;
       }
 
       setHtmlContent(content);
-      setCurrentTitle(chapter?.title || undefined);
 
       // scroll to fragment if present
       if (fragment) {
@@ -105,7 +95,7 @@ export default function EpubReader({ epub }: ReaderProps) {
     const doc = contentRef.current;
     try {
       const target = doc.querySelector(
-        `#${CSS.escape(fragmentId)}`,
+        `#${CSS.escape(fragmentId)}`
       ) as HTMLElement | null;
       if (target) {
         target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -120,7 +110,7 @@ export default function EpubReader({ epub }: ReaderProps) {
       }
     }
     const alt = doc.querySelector(
-      `[name="${fragmentId}"]`,
+      `[name="${fragmentId}"]`
     ) as HTMLElement | null;
     if (alt) alt.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -151,10 +141,11 @@ export default function EpubReader({ epub }: ReaderProps) {
     if (href) setSelectedHref(href);
   }
 
+  // FIXME: nested table of contents render twice
   function renderToc(
     entries: TocEntry[],
     path = "",
-    rendered = new Set<string>(),
+    rendered = new Set<string>()
   ) {
     return (
       <ul className="space-y-1 m-0 p-0 list-none  ">
@@ -254,14 +245,14 @@ export default function EpubReader({ epub }: ReaderProps) {
               variant="outline"
               size="icon"
               className="h-8 w-8 bg-transparent"
-              onClick={() => setFontSize(Math.min(24, fontSize + 2))}
+              onClick={() => setFontSize(Math.min(28, fontSize + 2))}
             >
               +
             </Button>
 
             <div className="ml-4">
               <strong className="text-foreground">
-                {currentTitle || "Untitled"}
+                {epub.metadata?.title || "untitled"}
               </strong>
             </div>
           </div>

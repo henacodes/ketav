@@ -9,6 +9,11 @@
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
+  "plugins": {
+     "sql": {
+      "preload": ["sqlite:ketav-local.db"]
+    }
+  },
   "app": {
     "windows": [
       {

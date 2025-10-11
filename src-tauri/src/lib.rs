@@ -12,16 +12,17 @@ pub fn run() {
         Migration {
             version: 1,
             description: "create_initial_tables",
-            sql: include_str!("../migrations/0000_regular_marten_broadcloak.sql"),
+            sql: include_str!("../migrations/0000_wealthy_hiroim.sql"),
             kind: MigrationKind::Up,
-        }
+        },
+
        
     ];
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
-                .add_migrations("sqlite:ketav.db", migrations)
+                .add_migrations("sqlite:ketav-local.db", migrations)
                 .build(),
         )
         .plugin(tauri_plugin_store::Builder::new().build())
