@@ -11,11 +11,11 @@ import { useEffect, useState } from "react";
 import { format, subDays, parseISO, isSameDay } from "date-fns";
 import { DailyReadingSummary } from "@/components/DailyReadingSummary";
 import Heatmap from "@/components/Heatmap";
+import { Book, DailyBookRecord } from "@/db/schema";
 
 type DailyBookStat = {
-  title: string;
-  author: string;
-  minutes: number;
+  book: Book;
+  stat: DailyBookRecord;
 };
 
 type DailyHeatmap = {
@@ -87,9 +87,8 @@ export function StreakPage() {
 
       books.forEach((b) => {
         restructuredArray.push({
-          minutes: b.minutesRead,
-          title: b.book.title,
-          author: b.book.author,
+          stat: b,
+          book: b.book,
         });
       });
       setDailyBooks(restructuredArray);

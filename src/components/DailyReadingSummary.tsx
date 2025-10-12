@@ -1,9 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { BookOpen, Clock } from "lucide-react";
+import { Button } from "./ui/button";
+import { Book, DailyBookRecord } from "@/db/schema";
+import { getBookReadDaysLastYear } from "@/db/services/stats.services";
+import { useStatsStore } from "@/stores/useStatsStore";
 
 type BookReadingSession = {
-  title: string;
-  minutes: number;
+  book: Book;
+  stat: DailyBookRecord;
 };
 
 export function DailyReadingSummary({
@@ -11,10 +15,12 @@ export function DailyReadingSummary({
 }: {
   bookSessions: BookReadingSession[];
 }) {
+  const { openBookStatsDialog } = useStatsStore((store) => store);
   const totalMinutes = bookSessions.reduce(
-    (sum, session) => sum + session.minutes,
+    (sum, session) => sum + session.stat.minutesRead,
     0
   );
+
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
@@ -26,6 +32,12 @@ export function DailyReadingSummary({
     }
     return `${m}m`;
   };
+
+  async function handleBookStatsSummary(book: Book) {
+    const allDays = await getBookReadDaysLastYear(book.bookId);
+
+    openBookStatsDialog({ book, heatmap: allDays });
+  }
 
   return (
     <Card className="p-6 bg-card border-border">
@@ -42,10 +54,22 @@ export function DailyReadingSummary({
             key={index}
             className="flex items-center justify-between py-3 border-b border-border last:border-0"
           >
-            <span className="text-foreground font-medium">{session.title}</span>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm">{formatTime(session.minutes)}</span>
+            <span className="text-foreground font-medium">
+              {session.book.title}
+            </span>
+            <div className=" flex items-center gap-6   ">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm">
+                  {formatTime(session.stat.minutesRead)}
+                </span>
+              </div>
+              <Button
+                onClick={() => handleBookStatsSummary(session.book)}
+                variant={"ghost"}
+              >
+                More{" "}
+              </Button>
             </div>
           </div>
         ))}

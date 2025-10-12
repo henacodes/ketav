@@ -205,3 +205,23 @@ export async function getLastYearUserStats() {
 
   return stats;
 }
+
+export async function getBookReadDaysLastYear(bookId: string) {
+  // Calculate the date 1 year ago
+  const oneYearAgo = subDays(new Date(), 365);
+  const formattedDate = format(oneYearAgo, "yyyy-MM-dd");
+
+  // Query the dailyBookStats table
+  const days = await db
+    .select()
+    .from(dailyBookStats)
+    .where(
+      and(
+        eq(dailyBookStats.bookId, bookId),
+        gte(dailyBookStats.day, formattedDate)
+      )
+    )
+    .orderBy(dailyBookStats.day);
+
+  return days;
+}

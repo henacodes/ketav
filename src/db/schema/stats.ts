@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { books } from "./book";
-import { relations } from "drizzle-orm";
+import { relations, InferSelectModel } from "drizzle-orm";
 
 export const dailyUserStats = sqliteTable("daily_user_stats", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -27,3 +27,5 @@ export const dailyBookStatsRelations = relations(dailyBookStats, ({ one }) => ({
     references: [books.bookId],
   }),
 }));
+
+export type DailyBookRecord = InferSelectModel<typeof dailyBookStats>;
