@@ -4,16 +4,23 @@ import {
   getStreakSummary,
   getBooksForDay,
   seedRandomDailyUserStats,
+  getLastYearUserStats,
 } from "@/db/services/stats.services";
 import { Flame, Calendar, Target, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { format, subDays, parseISO, isSameDay } from "date-fns";
 import { DailyReadingSummary } from "@/components/DailyReadingSummary";
+import Heatmap from "@/components/Heatmap";
 
 type DailyBookStat = {
   title: string;
   author: string;
   minutes: number;
+};
+
+type DailyHeatmap = {
+  date: string;
+  count: number;
 };
 
 export function StreakPage() {
@@ -33,18 +40,30 @@ export function StreakPage() {
   );
   const [dailyBooks, setDailyBooks] = useState<DailyBookStat[]>([]);
 
+  const [lastYearHeatmap, setLastYearHeatmap] = useState<DailyHeatmap[]>([]);
+
+  async function loadHeatmapData() {
+    const stats = await getLastYearUserStats();
+
+    const data = stats.map((s) => ({
+      date: s.day,
+      count: s.minutesRead, // or sessionsCount, depending on what you want to visualize
+    }));
+
+    setLastYearHeatmap(data);
+  }
+
   // Fetch streaks & summary
   useEffect(() => {
     async function fetchData() {
-      // Optional for testing
       // await seedRandomDailyUserStats();
 
-      const [res, summaryData] = await Promise.all([
+      const [last7DaysStat, summaryData] = await Promise.all([
         getDailyUserStatsForLastDays(7),
         getStreakSummary(),
       ]);
 
-      setStreaks(res);
+      setStreaks(last7DaysStat);
       setSummary(summaryData);
 
       // Last 7 days array
@@ -57,6 +76,7 @@ export function StreakPage() {
     }
 
     fetchData();
+    loadHeatmapData();
   }, []);
 
   // Fetch books for selected day
@@ -174,6 +194,13 @@ export function StreakPage() {
       {/* Daily Reading Summary */}
       <div className="mt-6">
         <DailyReadingSummary bookSessions={dailyBooks} />
+      </div>
+
+      <div className=" my-3 ">
+        <p className=" my-2 font-semibold text-foreground">
+          Here is your reading history of the last 365 days{" "}
+        </p>
+        <Heatmap endDate="2025-10-12" data={lastYearHeatmap} />
       </div>
     </div>
   );

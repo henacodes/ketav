@@ -2,7 +2,7 @@ import EpubReader from "@/components/EpubReader";
 import { useReaderStore } from "@/stores/useReaderStore";
 import { useEffect } from "react";
 import { Link } from "react-router";
-import { BookAlert, ArrowRight } from "lucide-react";
+import { BookAlert, ArrowRight, MoveRight } from "lucide-react";
 import { db } from "@/db/";
 import { generateBookId } from "@/lib/helpers/epub";
 import { Epub } from "epubix";
@@ -50,11 +50,11 @@ export function HomePage() {
           <div className=" flex items-center">
             You dont have any open book. Please go over to
             <Link
-              className=" mx-2 text-accent flex items-center  border-b border-accent  "
+              className=" mx-2 text-primary flex items-center   hover:border-b border-accent          "
               to={"/library"}
             >
               <span>Library</span>
-              <ArrowRight size={15} />
+              <MoveRight size={15} className="mx-2" />
             </Link>
             to open one
           </div>

@@ -1,4 +1,4 @@
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, lte } from "drizzle-orm";
 import { dailyBookStats, dailyUserStats } from "@/db/schema/stats";
 import { db } from "..";
 import { differenceInCalendarDays, format, parseISO, subDays } from "date-fns";
@@ -101,7 +101,7 @@ export async function getStreakSummary() {
     .select()
     .from(dailyUserStats)
     .where(gt(dailyUserStats.minutesRead, 0))
-    .orderBy(dailyUserStats.day);
+    .orderBy(dailyUserStats.day); // ascending
 
   if (stats.length === 0) {
     return {
@@ -111,38 +111,65 @@ export async function getStreakSummary() {
     };
   }
 
-  const dates = stats.map((s) => parseISO(s.day));
-  const totalDays = dates.length;
+  // Build a sorted array of unique Date objects (dedupe same dates)
+  const seen = new Set<string>();
+  const uniqueDates: Date[] = [];
+  for (const s of stats) {
+    // s.day already in 'yyyy-MM-dd' format
+    if (!seen.has(s.day)) {
+      seen.add(s.day);
+      uniqueDates.push(parseISO(s.day));
+    }
+  }
 
+  const totalDays = uniqueDates.length;
+
+  if (totalDays === 0) {
+    return {
+      currentStreak: 0,
+      longestStreak: 0,
+      totalDays: 0,
+    };
+  }
+
+  // Compute longest streak
   let longestStreak = 1;
-  let currentStreak = 1;
   let tempStreak = 1;
 
-  for (let i = 1; i < dates.length; i++) {
-    const diff = differenceInCalendarDays(dates[i], dates[i - 1]);
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const diff = differenceInCalendarDays(uniqueDates[i], uniqueDates[i - 1]);
 
     if (diff === 1) {
       tempStreak++;
       longestStreak = Math.max(longestStreak, tempStreak);
-    } else if (diff > 1) {
+    } else if (diff === 0) {
+      // same day (shouldn't happen after dedupe, but safe to ignore)
+      continue;
+    } else {
       tempStreak = 1;
     }
   }
 
-  // Check if the last reading date is today or yesterday (still active streak)
-  const lastReading = dates[dates.length - 1];
+  // Compute current streak
+  let currentStreak = 0;
+  const lastReading = uniqueDates[uniqueDates.length - 1];
   const today = new Date();
   const diffToToday = differenceInCalendarDays(today, lastReading);
 
-  if (diffToToday > 1) {
-    currentStreak = 0; // broke streak
-  } else {
-    // Count consecutive streak ending with last day
-    currentStreak = 1;
-    for (let i = dates.length - 1; i > 0; i--) {
-      const diff = differenceInCalendarDays(dates[i], dates[i - 1]);
-      if (diff === 1) currentStreak++;
-      else break;
+  // only start counting if lastReading is today or yesterday
+  if (diffToToday <= 1) {
+    currentStreak = 1; // include lastReading
+    for (let i = uniqueDates.length - 1; i > 0; i--) {
+      const diff = differenceInCalendarDays(uniqueDates[i], uniqueDates[i - 1]);
+
+      if (diff === 1) {
+        currentStreak++;
+      } else if (diff === 0) {
+        // ignore duplicates (defensive)
+        continue;
+      } else {
+        break;
+      }
     }
   }
 
@@ -161,4 +188,20 @@ export async function getBooksForDay(day: string) {
   });
 
   return results;
+}
+
+export async function getLastYearUserStats() {
+  const today = new Date();
+  const startDate = subDays(today, 364);
+
+  const start = format(startDate, "yyyy-MM-dd");
+  const end = format(today, "yyyy-MM-dd");
+
+  const stats = await db
+    .select()
+    .from(dailyUserStats)
+    .where(and(gte(dailyUserStats.day, start), lte(dailyUserStats.day, end)))
+    .orderBy(dailyUserStats.day);
+
+  return stats;
 }
