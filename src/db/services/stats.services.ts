@@ -1,12 +1,14 @@
 import { eq, and, gt } from "drizzle-orm";
 import { dailyBookStats, dailyUserStats } from "@/db/schema/stats";
 import { db } from "..";
-import {differenceInCalendarDays, format, parseISO, subDays} from "date-fns"
+import { differenceInCalendarDays, format, parseISO, subDays } from "date-fns";
 import { gte } from "drizzle-orm";
 
-
-export async function updateBookStats(minutesIncrement: number, bookId: string, day: string) {
-
+export async function updateBookStats(
+  minutesIncrement: number,
+  bookId: string,
+  day: string
+) {
   const existing = await db.query.dailyBookStats.findFirst({
     where: and(eq(dailyBookStats.bookId, bookId), eq(dailyBookStats.day, day)),
   });
@@ -16,29 +18,28 @@ export async function updateBookStats(minutesIncrement: number, bookId: string, 
       .update(dailyBookStats)
       .set({
         minutesRead: existing.minutesRead + minutesIncrement,
-        lastActive:Date.now()
+        lastActive: Date.now(),
       })
-      .where(and(eq(dailyBookStats.bookId, bookId), eq(dailyBookStats.day, day)));
+      .where(
+        and(eq(dailyBookStats.bookId, bookId), eq(dailyBookStats.day, day))
+      );
   } else {
     // Insert new record
     await db.insert(dailyBookStats).values({
       bookId,
       day,
       minutesRead: minutesIncrement,
-      lastActive:Date.now()
+      lastActive: Date.now(),
     });
   }
 
   console.log(`[DB] Updated ${bookId} for ${day} (+${minutesIncrement} min)`);
 }
 
-
-
-
-export async function updateDailyUserStats(minutesIncrement: number, day:string) {
-
-
-
+export async function updateDailyUserStats(
+  minutesIncrement: number,
+  day: string
+) {
   // Check if there's already a record for today
   const existing = await db.query.dailyUserStats.findFirst({
     where: eq(dailyUserStats.day, day),
@@ -50,7 +51,6 @@ export async function updateDailyUserStats(minutesIncrement: number, day:string)
       .update(dailyUserStats)
       .set({
         minutesRead: existing.minutesRead + minutesIncrement,
-        
       })
       .where(eq(dailyUserStats.day, day));
   } else {
@@ -63,8 +63,6 @@ export async function updateDailyUserStats(minutesIncrement: number, day:string)
 
   console.log(`[DB] Updated daily stats for ${day} (+${minutesIncrement} min)`);
 }
-
-
 
 export async function getDailyUserStatsForLastDays(days: number) {
   const today = new Date();
@@ -87,9 +85,7 @@ export async function seedRandomDailyUserStats() {
     format(subDays(today, i), "yyyy-MM-dd")
   );
 
-  const randomDays = last7Days
-    .sort(() => Math.random() - 0.5)
-    .slice(0, 4);
+  const randomDays = last7Days.sort(() => Math.random() - 0.5).slice(0, 4);
 
   const entries = randomDays.map((day) => ({
     day,
@@ -97,16 +93,14 @@ export async function seedRandomDailyUserStats() {
   }));
 
   await db.insert(dailyUserStats).values(entries);
-
 }
-
 
 export async function getStreakSummary() {
   // Fetch all reading days (with > 0 minutes)
   const stats = await db
     .select()
     .from(dailyUserStats)
-    .where(gt(dailyUserStats.minutesRead,0))
+    .where(gt(dailyUserStats.minutesRead, 0))
     .orderBy(dailyUserStats.day);
 
   if (stats.length === 0) {
@@ -157,4 +151,14 @@ export async function getStreakSummary() {
     longestStreak,
     totalDays,
   };
+}
+export async function getBooksForDay(day: string) {
+  const results = await db.query.dailyBookStats.findMany({
+    where: eq(dailyBookStats.day, day),
+    with: {
+      book: true,
+    },
+  });
+
+  return results;
 }

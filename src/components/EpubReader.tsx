@@ -1,4 +1,4 @@
-import  { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Epub, TocEntry } from "epubix";
 import { Button } from "./ui/button";
 import { Bookmark } from "lucide-react";
@@ -12,7 +12,7 @@ interface ReaderProps {
 export default function EpubReader({ epub }: ReaderProps) {
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
   const [htmlContent, setHtmlContent] = useState<string>("<div />");
-  useReadingTracker({ bookId:generateBookId(epub) });
+  useReadingTracker({ bookId: generateBookId(epub) });
 
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -130,9 +130,6 @@ export default function EpubReader({ epub }: ReaderProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHref]);
 
-
-
-  // FIXME: nested table of contents render twice
   function renderToc(
     entries: TocEntry[],
     path = "",

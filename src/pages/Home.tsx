@@ -3,11 +3,12 @@ import { useReaderStore } from "@/stores/useReaderStore";
 import { useEffect } from "react";
 import { Link } from "react-router";
 import { BookAlert, ArrowRight } from "lucide-react";
-import {db} from "@/db/"
+import { db } from "@/db/";
 import { generateBookId } from "@/lib/helpers/epub";
 import { Epub } from "epubix";
 import { books } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import TestReader from "@/components/TestReader";
 
 export function HomePage() {
   const { openBook } = useReaderStore();
@@ -16,16 +17,22 @@ export function HomePage() {
     if (!openBook) return;
     console.log("openBookopenBook", openBook);
 
-    async function saveBookToDb(b:Epub) {
+    async function saveBookToDb(b: Epub) {
+      const bookId = generateBookId(b);
 
-    const bookId =  generateBookId(b);
-
-    const exists = await db.select().from(books).where(eq(books.bookId, bookId))
-    if (!exists.length) {
-      const { metadata } = b
-      await db.insert(books).values({ bookId, title:metadata?.title || "Untitled", author:metadata?.author || "John Doe" })
-    }
-    console.log("ALREADY SAVED TO DB", bookId, exists)
+      const exists = await db
+        .select()
+        .from(books)
+        .where(eq(books.bookId, bookId));
+      if (!exists.length) {
+        const { metadata } = b;
+        await db.insert(books).values({
+          bookId,
+          title: metadata?.title || "Untitled",
+          author: metadata?.author || "John Doe",
+        });
+      }
+      console.log("ALREADY SAVED TO DB", bookId, exists);
     }
 
     saveBookToDb(openBook.book);
@@ -40,12 +47,6 @@ export function HomePage() {
           <div className=" flex items-center justify-center my-3   ">
             <BookAlert size={100} />
           </div>
-         {/*  <Button onClick={async() =>{
-        //  await db.insert(books).values({bookId:"test_book_id", title:"Test Book", author:"Test Author"})
-        await db.insert(books).values({ bookId:"book_id",title:"Another Test Book", author:"Another Test Author"})   
-        const all = await db.select().from(books)
-            console.log("ALL BOOKS", all)
-          }}>Test  db</Button> */}
           <div className=" flex items-center">
             You dont have any open book. Please go over to
             <Link

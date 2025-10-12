@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "db:generate":"npx drizzle-kit generate",
-    "db:studio":"npx drizzle-kit studio",
+    "db:generate": "npx drizzle-kit generate",
+    "db:studio": "npx drizzle-kit studio",
     "tauri": "tauri"
   },
   "dependencies": {
@@ -30,7 +30,7 @@
     "dompurify": "^3.2.7",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.6",
-    "epubix": "^0.2.4",
+    "epubix": "^0.2.5",
     "jszip": "^3.10.1",
     "lucide-react": "^0.544.0",
     "react": "^19.1.0",
