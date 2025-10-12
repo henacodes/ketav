@@ -25,7 +25,7 @@ export default function RootLayout() {
   ];
 
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <main className="flex-1 flex flex-col">
         <aside
           className={cn(
