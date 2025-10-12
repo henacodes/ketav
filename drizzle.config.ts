@@ -1,11 +1,14 @@
 import { defineConfig } from "drizzle-kit";
 
-// this config has no relevance as the database resides inside app data where the drizzle-kit cant access it and that migrations are applied by lib.rs
+
+// the sqlite file resides in the tauri app data directory
+// i had no choice but to hardcode it for now
+
 export default defineConfig({
   out: "./src-tauri/migrations",
   schema: "./src/db/schema/index.ts",
   dialect: "sqlite",
   dbCredentials: {
-    url: `sqlite:ketav.db`,
+    url: `file:/home/kirakos/.config/com.kirakos.ketav/ketav-local.db`,
   },
 });

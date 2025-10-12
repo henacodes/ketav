@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "505f29b2-156a-472c-b770-320931e240c0",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "a4cf52f8-52c6-4743-b684-0b5b8a3d2718",
+  "prevId": "0e73b620-2b9d-48a5-a0d2-71b95a9c2dc1",
   "tables": {
     "books": {
       "name": "books",
@@ -53,13 +53,6 @@
     "daily_book_stats": {
       "name": "daily_book_stats",
       "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "day": {
           "name": "day",
           "type": "text",
@@ -69,7 +62,7 @@
         },
         "book_id": {
           "name": "book_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -92,15 +85,15 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "daily_book_stats_book_id_books_id_fk": {
-          "name": "daily_book_stats_book_id_books_id_fk",
+        "daily_book_stats_book_id_books_book_id_fk": {
+          "name": "daily_book_stats_book_id_books_book_id_fk",
           "tableFrom": "daily_book_stats",
           "tableTo": "books",
           "columnsFrom": [
             "book_id"
           ],
           "columnsTo": [
-            "id"
+            "book_id"
           ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
@@ -119,13 +112,6 @@
           "primaryKey": true,
           "notNull": true,
           "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
         },
         "day": {
           "name": "day",

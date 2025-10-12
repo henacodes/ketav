@@ -7,12 +7,17 @@ import { Moon, Bell, Eye, Download, FolderOpen } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import useSettingsStore from "@/stores/useSettingsStore";
 import { documentDir, normalize, join } from "@tauri-apps/api/path";
+import { Theme, useTheme } from "@/components/theme-provider";
+import { THEME_STORAGE_KEY } from "@/lib/constants";
 
 export function SettingsPage() {
-  const [selectedDir, setSelectedDir] = useState<string | null>(null);
+  const [_, setSelectedDir] = useState<string | null>(null);
+  const { setTheme } = useTheme();
+
   const { settings, fetchSettings, updateLibraryFolderPath } =
     useSettingsStore();
   const [fullLibraryPath, setFullLibraryPath] = useState<string | null>(null);
+  const [currentTheme, setCurrentTheme] = useState<Theme>("light");
 
   async function handleSelectDirectory() {
     const selected = await open({
@@ -65,6 +70,15 @@ export function SettingsPage() {
 
     updateFullPath();
   }, [settings]);
+
+  useEffect(() => {
+    const theme = localStorage.getItem(THEME_STORAGE_KEY);
+    if (theme == "dark") {
+      setCurrentTheme("dark");
+    } else {
+      setCurrentTheme("light");
+    }
+  }, []);
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className="text-3xl font-bold mb-2 text-foreground">Settings</h1>
@@ -79,7 +93,7 @@ export function SettingsPage() {
             Appearance
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
                 <Moon className="w-5 h-5 text-primary" />
                 <div>
@@ -89,10 +103,17 @@ export function SettingsPage() {
                   </p>
                 </div>
               </div>
-              <Switch checked disabled />
+              <Switch
+                checked={currentTheme === "dark"}
+                onCheckedChange={(checked) => {
+                  let theme: Theme = checked ? "dark" : "light";
+                  setTheme(theme);
+                  setCurrentTheme(theme);
+                }}
+              />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
                 <Eye className="w-5 h-5 text-primary" />
                 <div>
@@ -113,7 +134,7 @@ export function SettingsPage() {
             Notifications
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
                 <Bell className="w-5 h-5 text-primary" />
                 <div>
@@ -126,7 +147,7 @@ export function SettingsPage() {
               <Switch />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
                 <Bell className="w-5 h-5 text-primary" />
                 <div>
@@ -149,7 +170,7 @@ export function SettingsPage() {
             Data & Storage
           </h2>
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
                 <Download className="w-5 h-5 text-primary" />
                 <div>
@@ -164,19 +185,20 @@ export function SettingsPage() {
               </Button>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-11  ">
+              <div className="flex items-center gap-3 ">
                 <FolderOpen className="w-5 h-5 text-primary" />
                 <div>
                   <Label className="text-foreground">Storage Location</Label>
                   <p className="text-sm text-muted-foreground">
-                    Choose where your downloaded books are stored
+                    Select the folder you store your EPub files 
                   </p>
                 </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
+                className="  "
                 onClick={handleSelectDirectory}
               >
                 Select Folder

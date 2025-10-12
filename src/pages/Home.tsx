@@ -1,7 +1,14 @@
 import EpubReader from "@/components/EpubReader";
-import { Button } from "@/components/ui/button";
 import { useReaderStore } from "@/stores/useReaderStore";
 import { useEffect } from "react";
+import { Link } from "react-router";
+import { BookAlert, ArrowRight, MoveRight } from "lucide-react";
+import { db } from "@/db/";
+import { generateBookId } from "@/lib/helpers/epub";
+import { Epub } from "epubix";
+import { books } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import TestReader from "@/components/TestReader";
 
 export function HomePage() {
   const { openBook } = useReaderStore();
@@ -9,36 +16,50 @@ export function HomePage() {
   useEffect(() => {
     if (!openBook) return;
     console.log("openBookopenBook", openBook);
+
+    async function saveBookToDb(b: Epub) {
+      const bookId = generateBookId(b);
+
+      const exists = await db
+        .select()
+        .from(books)
+        .where(eq(books.bookId, bookId));
+      if (!exists.length) {
+        const { metadata } = b;
+        await db.insert(books).values({
+          bookId,
+          title: metadata?.title || "Untitled",
+          author: metadata?.author || "John Doe",
+        });
+      }
+      console.log("ALREADY SAVED TO DB", bookId, exists);
+    }
+
+    saveBookToDb(openBook.book);
   }, [openBook]);
 
-  return (
-    <div>
-      <Button
-        onClick={async () => {
-          try {
-            console.log("supppp");
-            // Lazy import the db so we can see the error only on demand and avoid
-            // crashing the whole renderer at module-load time.
-            const { db } = await import("@/db");
-            const { books } = await import("@/db/schema");
-
-            const res = await db
-              .insert(books)
-              .values({ title: "SOme test book title", author: "Jimmy Dunn" });
-            const query = await db.select().from(books);
-
-            console.log("querrry", query);
-          } catch (err) {
-            // Print the full error; paste this into the chat.
-            console.error("DB import/operation failed:", err);
-            alert("DB operation failed — see console for details.");
-          }
-        }}
-      >
-        Test DBbb
-      </Button>
-
-      {openBook?.book && <EpubReader epub={openBook?.book} />}
-    </div>
-  );
+  if (openBook?.book) {
+    return <EpubReader epub={openBook?.book} />;
+  } else {
+    return (
+      <div className=" bg-card h-[93vh] flex items-center justify-center    ">
+        <div>
+          <div className=" flex items-center justify-center my-3   ">
+            <BookAlert size={100} />
+          </div>
+          <div className=" flex items-center">
+            You dont have any open book. Please go over to
+            <Link
+              className=" mx-2 text-primary flex items-center   hover:border-b border-accent          "
+              to={"/library"}
+            >
+              <span>Library</span>
+              <MoveRight size={15} className="mx-2" />
+            </Link>
+            to open one
+          </div>
+        </div>
+      </div>
+    );
+  }
 }

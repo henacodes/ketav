@@ -14,7 +14,7 @@ interface ReaderStore {
   error: { message: string; detail?: string } | null;
 }
 
-export const useReaderStore = create<ReaderStore>((set, get) => ({
+export const useReaderStore = create<ReaderStore>((set) => ({
   loading: false,
   error: null,
   openBook: null,

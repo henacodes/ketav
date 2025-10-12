@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "505f29b2-156a-472c-b770-320931e240c0",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "0e73b620-2b9d-48a5-a0d2-71b95a9c2dc1",
+  "prevId": "505f29b2-156a-472c-b770-320931e240c0",
   "tables": {
     "books": {
       "name": "books",
@@ -69,7 +69,7 @@
         },
         "book_id": {
           "name": "book_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -92,15 +92,15 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "daily_book_stats_book_id_books_id_fk": {
-          "name": "daily_book_stats_book_id_books_id_fk",
+        "daily_book_stats_book_id_books_book_id_fk": {
+          "name": "daily_book_stats_book_id_books_book_id_fk",
           "tableFrom": "daily_book_stats",
           "tableTo": "books",
           "columnsFrom": [
             "book_id"
           ],
           "columnsTo": [
-            "id"
+            "book_id"
           ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
