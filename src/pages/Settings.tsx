@@ -93,7 +93,7 @@ export function SettingsPage() {
             Appearance
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
                 <Moon className="w-5 h-5 text-primary" />
                 <div>
@@ -113,7 +113,7 @@ export function SettingsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
                 <Eye className="w-5 h-5 text-primary" />
                 <div>
@@ -134,7 +134,7 @@ export function SettingsPage() {
             Notifications
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
                 <Bell className="w-5 h-5 text-primary" />
                 <div>
@@ -147,7 +147,7 @@ export function SettingsPage() {
               <Switch />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
                 <Bell className="w-5 h-5 text-primary" />
                 <div>
@@ -170,7 +170,7 @@ export function SettingsPage() {
             Data & Storage
           </h2>
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
                 <Download className="w-5 h-5 text-primary" />
                 <div>
@@ -185,19 +185,20 @@ export function SettingsPage() {
               </Button>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-11  ">
+              <div className="flex items-center gap-3 ">
                 <FolderOpen className="w-5 h-5 text-primary" />
                 <div>
                   <Label className="text-foreground">Storage Location</Label>
                   <p className="text-sm text-muted-foreground">
-                    Choose where your downloaded books are stored
+                    Select the folder you store your EPub files 
                   </p>
                 </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
+                className="  "
                 onClick={handleSelectDirectory}
               >
                 Select Folder

@@ -15,3 +15,4 @@ export const dailyBookStats = sqliteTable("daily_book_stats", {
   minutesRead: integer("minutes_read").notNull().default(0),
   lastActive: integer("last_active")
 });
+
