@@ -182,7 +182,9 @@ export function StreakPage() {
 
         <div className="mt-8 p-4 bg-muted rounded-lg">
           <p className="text-sm text-foreground">
-            <span className="font-semibold text-primary">Keep it up!</span>{" "}
+            {streaks.filter((s) => s.minutesRead > 0).length && (
+              <span className="font-semibold text-primary">Keep it up!</span>
+            )}{" "}
             You’ve been active for{" "}
             {streaks.filter((s) => s.minutesRead > 0).length} of the last 7
             days.
@@ -192,12 +194,12 @@ export function StreakPage() {
 
       {/* Daily Reading Summary */}
       <div className="mt-6">
-        <DailyReadingSummary bookSessions={dailyBooks} />
+        <DailyReadingSummary day={selectedDay} bookSessions={dailyBooks} />
       </div>
 
       <div className=" my-3 ">
         <p className=" my-2 font-semibold text-foreground">
-          Here is your reading history of the last 365 days{" "}
+          Here is your reading history of the last 365 days
         </p>
         <Heatmap endDate="2025-10-12" data={lastYearHeatmap} />
       </div>

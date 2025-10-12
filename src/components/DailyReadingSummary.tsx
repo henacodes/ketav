@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { Book, DailyBookRecord } from "@/db/schema";
 import { getBookReadDaysLastYear } from "@/db/services/stats.services";
 import { useStatsStore } from "@/stores/useStatsStore";
+import { format, isToday, isYesterday, parseISO } from "date-fns";
 
 type BookReadingSession = {
   book: Book;
@@ -12,7 +13,9 @@ type BookReadingSession = {
 
 export function DailyReadingSummary({
   bookSessions,
+  day,
 }: {
+  day: string;
   bookSessions: BookReadingSession[];
 }) {
   const { openBookStatsDialog } = useStatsStore((store) => store);
@@ -39,16 +42,26 @@ export function DailyReadingSummary({
     openBookStatsDialog({ book, heatmap: allDays });
   }
 
+  function getDayLabel(day: string) {
+    const date = parseISO(day);
+
+    if (isToday(date)) return "Today's";
+    if (isYesterday(date)) return "Yesterday's";
+
+    return format(date, "yyyy-MM-dd"); // or "MMM d, yyyy" if you want prettier
+  }
+
   return (
     <Card className="p-6 bg-card border-border">
       <div className="flex items-center gap-3 mb-6">
         <BookOpen className="w-5 h-5 text-primary" />
         <h2 className="text-xl font-semibold text-foreground">
-          Today's Reading Summary
+          {getDayLabel(day)} Reading Summary
         </h2>
       </div>
 
       <div className="space-y-4 mb-6">
+        {bookSessions.length < 1 && <p>No book has been read this day</p>}
         {bookSessions.map((session, index) => (
           <div
             key={index}

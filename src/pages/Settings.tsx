@@ -3,12 +3,13 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Moon, Bell, Eye, Download, FolderOpen } from "lucide-react";
+import { Moon, Bell, Eye, Download, FolderOpen, Terminal } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import useSettingsStore from "@/stores/useSettingsStore";
 import { documentDir, normalize, join } from "@tauri-apps/api/path";
 import { Theme, useTheme } from "@/components/theme-provider";
 import { THEME_STORAGE_KEY } from "@/lib/constants";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function SettingsPage() {
   const [_, setSelectedDir] = useState<string | null>(null);
@@ -18,6 +19,11 @@ export function SettingsPage() {
     useSettingsStore();
   const [fullLibraryPath, setFullLibraryPath] = useState<string | null>(null);
   const [currentTheme, setCurrentTheme] = useState<Theme>("light");
+
+  const [error, setError] = useState<{
+    title: string;
+    description?: string;
+  } | null>(null);
 
   async function handleSelectDirectory() {
     const selected = await open({
@@ -37,6 +43,12 @@ export function SettingsPage() {
     // Check if selected folder is inside Documents
     if (!normalizedSelected.startsWith(normalizedDocs)) {
       console.error("Selected folder must be inside Documents");
+      setError({
+        title: "Invalid Folder",
+        description:
+          "You can only select a folder nested inside Documents folder",
+      });
+
       return;
     }
 
@@ -87,6 +99,13 @@ export function SettingsPage() {
       </p>
 
       <div className="space-y-6">
+        {error && (
+          <Alert variant="destructive">
+            <Terminal />
+            <AlertTitle>{error.title}</AlertTitle>
+            <AlertDescription>{error.description}</AlertDescription>
+          </Alert>
+        )}
         {/* Appearance */}
         <Card className="p-6 bg-card border-border">
           <h2 className="text-xl font-semibold mb-4 text-foreground">
@@ -112,19 +131,6 @@ export function SettingsPage() {
                 }}
               />
             </div>
-
-            <div className="flex items-center justify-between gap-11  ">
-              <div className="flex items-center gap-3">
-                <Eye className="w-5 h-5 text-primary" />
-                <div>
-                  <Label className="text-foreground">Reading Focus Mode</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Minimize distractions while reading
-                  </p>
-                </div>
-              </div>
-              <Switch />
-            </div>
           </div>
         </Card>
 
@@ -146,21 +152,6 @@ export function SettingsPage() {
               </div>
               <Switch />
             </div>
-
-            <div className="flex items-center justify-between gap-11  ">
-              <div className="flex items-center gap-3">
-                <Bell className="w-5 h-5 text-primary" />
-                <div>
-                  <Label className="text-foreground">
-                    New Book Recommendations
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Discover books based on your interests
-                  </p>
-                </div>
-              </div>
-              <Switch />
-            </div>
           </div>
         </Card>
 
@@ -171,27 +162,13 @@ export function SettingsPage() {
           </h2>
           <div className="space-y-6">
             <div className="flex items-center justify-between gap-11  ">
-              <div className="flex items-center gap-3">
-                <Download className="w-5 h-5 text-primary" />
-                <div>
-                  <Label className="text-foreground">Offline Reading</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Download books for offline access
-                  </p>
-                </div>
-              </div>
-              <Button variant="outline" size="sm">
-                Manage
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3 ">
                 <FolderOpen className="w-5 h-5 text-primary" />
                 <div>
                   <Label className="text-foreground">Storage Location</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Select the folder you store your EPub files 
+                  <p className="text-sm text-muted-foreground my-1 ">
+                    Select the folder you store your EPub files ( should be
+                    inside Documents folder )
                   </p>
                 </div>
               </div>

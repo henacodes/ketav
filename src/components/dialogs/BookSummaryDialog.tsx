@@ -58,6 +58,9 @@ export default function BookSummaryDialog() {
             className="mt-6 overflow-x-auto scrollbar-hide"
             style={{ WebkitOverflowScrolling: "touch" }} // smooth scrolling on iOS
           >
+            <small className=" text-muted-foreground  ">
+              Scroll to the right to see the whole thing
+            </small>
             <Heatmap
               endDate={new Date().toISOString().split("T")[0]}
               data={heatmapData}
