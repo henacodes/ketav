@@ -201,7 +201,10 @@ export function StreakPage() {
         <p className=" my-2 font-semibold text-foreground">
           Here is your reading history of the last 365 days
         </p>
-        <Heatmap endDate="2025-10-12" data={lastYearHeatmap} />
+        <Heatmap
+          endDate={format(new Date(), "yyyy-MM-dd")}
+          data={lastYearHeatmap}
+        />
       </div>
     </div>
   );

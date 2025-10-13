@@ -48,7 +48,28 @@ export default function BookSummaryDialog() {
 
         {/* Total reading time */}
         <div className="mt-4 text-sm text-muted-foreground">
-          Total reading time: {formatMinutesToTime(totalMinutes)}
+          <p>
+            Author:{" "}
+            <b className=" text-primary ">{bookStatsSummary.book.author}</b>
+          </p>
+          <p>
+            Total reading time:{" "}
+            <b className=" text-primary ">
+              {formatMinutesToTime(totalMinutes)}
+            </b>
+          </p>
+          <p>
+            Last Read:{" "}
+            <b className=" text-primary ">
+              {" "}
+              {new Date(
+                (bookStatsSummary.heatmap &&
+                  bookStatsSummary.heatmap[bookStatsSummary.heatmap.length - 1]
+                    .lastActive) ||
+                  ""
+              ).toLocaleString()}
+            </b>
+          </p>
         </div>
 
         {/* Heatmap */}

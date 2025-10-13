@@ -15,14 +15,22 @@ export async function collectEpubs(files: DirEntry[]) {
   const settings = await getSettings();
 
   for (const file of files) {
-    const ep = await readFile(`${settings.libraryFolderPath}/${file.name}`, {
-      baseDir: BaseDirectory.Document,
-    });
+    try {
+      const ep = await readFile(`${settings.libraryFolderPath}/${file.name}`, {
+        baseDir: BaseDirectory.Document,
+      });
 
-    const epubMetadata = await loadEpubMetadata(ep);
+      const epubMetadata = await loadEpubMetadata(ep);
 
-    epubs.push({ ...epubMetadata, fileName: file.name });
+      console.log("Load epub metadata", epubMetadata);
+
+      epubs.push({ ...epubMetadata, fileName: file.name });
+    } catch (error) {
+      console.log("FAILED AT", file.name);
+    }
   }
+
+  console.log("epubsss", epubs);
 
   return epubs;
 }
@@ -64,18 +72,16 @@ export function filterTocByChapters(
   return processToc(toc);
 } */
 
-
-
-export function generateBookId(book:Epub): string {
-
-  const title = book.metadata?.title || `${book.chapters.length}` + `${book.toc.length}` // fallback to chapter and TOC length
-  const author = book.metadata?.author || ""
+export function generateBookId(book: Epub): string {
+  const title =
+    book.metadata?.title || `${book.chapters.length}` + `${book.toc.length}`; // fallback to chapter and TOC length
+  const author = book.metadata?.author || "";
   const normalize = (str: string) =>
     str
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");    
+      .replace(/^_+|_+$/g, "");
 
   const cleanAuthor = normalize(author);
   const cleanTitle = normalize(title);

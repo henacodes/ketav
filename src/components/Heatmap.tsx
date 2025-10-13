@@ -24,8 +24,19 @@ export default function Heatmap({
 }: HeatmapProps) {
   const days = useMemo(() => {
     const end = parseISO(endDate);
-    const start = subDays(end, 364);
-    const allDays = [];
+
+    // Base start is 364 days before end (1 year - 1 day)
+    let start = subDays(end, 364);
+
+    // Align start to the previous Sunday so weeks always start on Sunday
+    const startDay = start.getDay(); // 0 = Sun
+    if (startDay !== 0) {
+      start = subDays(start, startDay);
+    }
+
+    // NOTE: Do NOT extend the end date to the following Saturday.
+    // We intentionally stop at the provided `end` so the grid won't render future days.
+    const allDays: { date: string; count: number; weekday: number }[] = [];
 
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dateStr = format(d, "yyyy-MM-dd");
@@ -39,7 +50,9 @@ export default function Heatmap({
     return allDays;
   }, [endDate, data]);
 
-  // Chunk by weeks (7 days each)
+  // Chunk by weeks (7 days each). Because start is aligned to Sunday,
+  // each chunk begins on Sunday. The final chunk may be shorter and will
+  // only contain days up to `endDate`.
   const weeks = useMemo(() => {
     const chunked: { date: string; count: number; weekday: number }[][] = [];
     for (let i = 0; i < days.length; i += 7) {

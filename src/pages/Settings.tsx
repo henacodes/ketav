@@ -26,6 +26,7 @@ export function SettingsPage() {
   } | null>(null);
 
   async function handleSelectDirectory() {
+    setError(null);
     const selected = await open({
       directory: true,
       multiple: false,

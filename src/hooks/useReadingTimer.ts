@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { format } from "date-fns";
-import { updateBookStats, updateDailyUserStats } from "@/db/services/stats.services";
+import {
+  updateBookStats,
+  updateDailyUserStats,
+} from "@/db/services/stats.services";
 
 interface ReadingTrackerOptions {
   bookId: string;
@@ -14,9 +17,6 @@ export function useReadingTracker({ bookId }: ReadingTrackerOptions) {
   const intervalRef = useRef<number | null>(null);
   const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes
 
-
-
-  // 🧠 detect user activity
   useEffect(() => {
     const updateActivity = () => {
       lastActivityRef.current = Date.now();
@@ -34,33 +34,31 @@ export function useReadingTracker({ bookId }: ReadingTrackerOptions) {
     };
   }, [isActive]);
 
-useEffect(() => {
-  let unlistenFocus: (() => void) | null = null;
-  let unlistenBlur: (() => void) | null = null;
+  useEffect(() => {
+    let unlistenFocus: (() => void) | null = null;
+    let unlistenBlur: (() => void) | null = null;
 
-  async function handleFocusEvents() {
-    unlistenFocus = await listen("tauri://focus", () => {
-      console.log("FOCUSING AGAIN");
-      setIsActive(true);
-      lastActivityRef.current = Date.now();
-    });
+    async function handleFocusEvents() {
+      unlistenFocus = await listen("tauri://focus", () => {
+        console.log("FOCUSING AGAIN");
+        setIsActive(true);
+        lastActivityRef.current = Date.now();
+      });
 
-    unlistenBlur = await listen("tauri://blur", () => {
-      console.log("Window lost focus, pausing timer");
-      setIsActive(false);
-    });
-  }
+      unlistenBlur = await listen("tauri://blur", () => {
+        console.log("Window lost focus, pausing timer");
+        setIsActive(false);
+      });
+    }
 
-  handleFocusEvents();
+    handleFocusEvents();
 
-  // 🧹 Cleanup to avoid multiple listeners
-  return () => {
-    if (unlistenFocus) unlistenFocus();
-    if (unlistenBlur) unlistenBlur();
-  };
-}, []);
+    return () => {
+      if (unlistenFocus) unlistenFocus();
+      if (unlistenBlur) unlistenBlur();
+    };
+  }, []);
 
-  // ⏱️ main timer
   useEffect(() => {
     intervalRef.current = window.setInterval(async () => {
       const now = Date.now();
@@ -68,7 +66,7 @@ useEffect(() => {
       if (!isActive || inactiveTooLong) return;
 
       setMinutesRead((prev) => prev + 1);
-      console.log("isActiveisActive", isActive)
+      console.log("isActiveisActive", isActive);
       await updateStats(1); // +1 minute
     }, 60 * 1000);
 
@@ -78,14 +76,13 @@ useEffect(() => {
   }, [isActive]);
 
   async function updateStats(minutesIncrement: number) {
-  
     const day = format(new Date(), "yyyy-MM-dd");
 
-    console.log("HEARBEBAT SAVED")
-    await updateBookStats(minutesIncrement, bookId, day)
-    await updateDailyUserStats(minutesIncrement, day)
+    console.log("HEARBEBAT SAVED");
+    await updateBookStats(minutesIncrement, bookId, day);
+    await updateDailyUserStats(minutesIncrement, day);
 
-    console.log(`[DB] Updated ${bookId} for ${day} (+${minutesIncrement} min)`); 
+    console.log(`[DB] Updated ${bookId} for ${day} (+${minutesIncrement} min)`);
   }
 
   return { minutesRead, isActive };
