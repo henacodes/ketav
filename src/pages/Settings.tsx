@@ -118,9 +118,6 @@ export function SettingsPage() {
                 <Moon className="w-5 h-5 text-primary" />
                 <div>
                   <Label className="text-foreground">Dark Mode</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Always enabled for comfortable reading
-                  </p>
                 </div>
               </div>
               <Switch

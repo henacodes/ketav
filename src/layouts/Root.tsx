@@ -9,6 +9,8 @@ import {
   Menu,
   Moon,
   Settings,
+  TestTube,
+  TestTubeDiagonal,
   User,
 } from "lucide-react";
 import { useState } from "react";
@@ -76,8 +78,8 @@ export default function RootLayout() {
 
             <div className="p-4 border-t border-sidebar-border">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Moon className="w-4 h-4" />
-                <span>Dark Mode</span>
+                <TestTubeDiagonal size={20} />
+                <span>Beta Version</span>
               </div>
             </div>
           </div>

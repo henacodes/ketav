@@ -10,17 +10,34 @@ interface ReadingTrackerOptions {
   bookId: string;
 }
 
-export function useReadingTracker({ bookId }: ReadingTrackerOptions) {
-  const [isActive, setIsActive] = useState(true);
-  const [minutesRead, setMinutesRead] = useState(0);
+interface ReadingTrackerHookOptions {
+  /**
+   * If true, the hook will update a reactive minutesRead state each minute.
+   * Default: false (recommended to avoid unnecessary re-renders).
+   */
+  reactive?: boolean;
+}
+
+export function useReadingTracker(
+  { bookId }: ReadingTrackerOptions,
+  { reactive = false }: ReadingTrackerHookOptions = {}
+) {
+  // Internal refs (no rerenders when these change)
+  const isActiveRef = useRef(true);
+  const minutesRef = useRef(0);
   const lastActivityRef = useRef(Date.now());
   const intervalRef = useRef<number | null>(null);
+
+  // Public reactive state — only used if `reactive` is true.
+  const [minutesRead, setMinutesRead] = useState(0);
+
   const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes
 
+  // Activity listeners: attach once. Use refs to avoid causing re-subscriptions.
   useEffect(() => {
     const updateActivity = () => {
       lastActivityRef.current = Date.now();
-      if (!isActive) setIsActive(true);
+      isActiveRef.current = true;
     };
 
     window.addEventListener("mousemove", updateActivity);
@@ -32,58 +49,97 @@ export function useReadingTracker({ bookId }: ReadingTrackerOptions) {
       window.removeEventListener("keydown", updateActivity);
       window.removeEventListener("scroll", updateActivity);
     };
-  }, [isActive]);
+  }, []); // empty deps -> attach once
 
+  // Tauri focus/blur: update the ref only (don't set React state on blur).
   useEffect(() => {
     let unlistenFocus: (() => void) | null = null;
     let unlistenBlur: (() => void) | null = null;
 
     async function handleFocusEvents() {
       unlistenFocus = await listen("tauri://focus", () => {
-        console.log("FOCUSING AGAIN");
-        setIsActive(true);
+        // When app regains focus, mark active and flush UI if reactive
+        isActiveRef.current = true;
         lastActivityRef.current = Date.now();
+        if (reactive) {
+          // flush accumulated minutes so UI reflects the current value
+          setMinutesRead(minutesRef.current);
+        }
       });
 
       unlistenBlur = await listen("tauri://blur", () => {
-        console.log("Window lost focus, pausing timer");
-        setIsActive(false);
+        // Mark inactive in the ref only — avoid setState here to prevent rerender
+        isActiveRef.current = false;
       });
     }
 
-    handleFocusEvents();
+    void handleFocusEvents();
 
     return () => {
       if (unlistenFocus) unlistenFocus();
       if (unlistenBlur) unlistenBlur();
     };
-  }, []);
+  }, [reactive]); // only matters if reactive flag changes
 
+  // Visibility change: when user returns, flush minutes to UI if reactive
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (typeof document === "undefined") return;
+      if (!document.hidden && reactive) {
+        // flush accumulated minutes so UI updates once on return
+        setMinutesRead(minutesRef.current);
+      }
+    }
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibilityChange);
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+      }
+    };
+  }, [reactive]);
+
+  // Interval: run once and rely on refs to determine behavior.
   useEffect(() => {
     intervalRef.current = window.setInterval(async () => {
       const now = Date.now();
       const inactiveTooLong = now - lastActivityRef.current > INACTIVITY_LIMIT;
-      if (!isActive || inactiveTooLong) return;
+      if (!isActiveRef.current || inactiveTooLong) return;
 
-      setMinutesRead((prev) => prev + 1);
-      console.log("isActiveisActive", isActive);
-      await updateStats(1); // +1 minute
+      // increment the internal counter (no rerender)
+      minutesRef.current += 1;
+
+      // Only update React state when reactive and visible so switching windows doesn't trigger UI updates.
+      if (reactive && (typeof document === "undefined" || !document.hidden)) {
+        setMinutesRead(minutesRef.current);
+      }
+
+      // Persist increment to DB (still awaited, unchanged)
+      try {
+        await updateStats(1); // +1 minute
+      } catch (err) {
+        // swallow/log; avoid setState changes from DB errors here to keep renders stable
+        // console.error("updateStats error", err);
+      }
     }, 60 * 1000);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isActive]);
+  }, [bookId, reactive]); // recreate interval if bookId or reactive mode changes
 
   async function updateStats(minutesIncrement: number) {
     const day = format(new Date(), "yyyy-MM-dd");
 
-    console.log("HEARBEBAT SAVED");
     await updateBookStats(minutesIncrement, bookId, day);
     await updateDailyUserStats(minutesIncrement, day);
-
-    console.log(`[DB] Updated ${bookId} for ${day} (+${minutesIncrement} min)`);
   }
 
-  return { minutesRead, isActive };
+  // Return minutesRead (reactive if requested) and isActive (non-reactive snapshot).
+  return {
+    // If reactive is true we give the stateful value; otherwise return the ref value (non-reactive).
+    minutesRead: reactive ? minutesRead : minutesRef.current,
+    isActive: isActiveRef.current,
+  };
 }
