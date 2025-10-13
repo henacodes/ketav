@@ -13,10 +13,7 @@ export const dailyBookStats = sqliteTable("daily_book_stats", {
   day: text("day").notNull(), // 'YYYY-MM-DD'
   bookId: text("book_id")
     .notNull()
-    .references(() => books.bookId, {
-      onDelete: "cascade",
-      onUpdate: "cascade",
-    }),
+    .references(() => books.bookId),
   minutesRead: integer("minutes_read").notNull().default(0),
   lastActive: integer("last_active"),
 });

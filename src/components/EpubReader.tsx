@@ -215,8 +215,8 @@ export default function EpubReader({ epub }: ReaderProps) {
       </aside>
 
       {/* Viewer */}
-      <div className="flex-1 flex flex-col">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
+      <div className="flex-1 flex flex-col   ">
+        <header className="flex  items-center justify-between px-6 py-4 border-b border-border bg-card">
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
@@ -255,10 +255,10 @@ export default function EpubReader({ epub }: ReaderProps) {
           </Button>
         </header>
 
-        <div className="flex-1  h-11 p-6 bg-card  ">
+        <div className="flex-1  p-6 bg-card     ">
           <div
             ref={contentRef}
-            className="max-w-7xl mx-auto  overflow-auto max-h-[80vh] font-serif leading-relaxed space-y-6   "
+            className="max-w-7xl mx-auto  overflow-auto max-h-[81.4vh] font-serif leading-relaxed space-y-6 "
             style={{ fontSize: `${fontSize}px` }}
           >
             <div dangerouslySetInnerHTML={{ __html: htmlContent }} />

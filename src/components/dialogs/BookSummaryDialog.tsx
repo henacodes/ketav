@@ -77,7 +77,7 @@ export default function BookSummaryDialog() {
           <div
             ref={containerRef}
             className="mt-6 overflow-x-auto scrollbar-hide"
-            style={{ WebkitOverflowScrolling: "touch" }} // smooth scrolling on iOS
+            style={{ WebkitOverflowScrolling: "touch" }}
           >
             <small className=" text-muted-foreground  ">
               Scroll to the right to see the whole thing

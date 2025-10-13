@@ -174,3 +174,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+
+*::-webkit-scrollbar{
+   background-color:transparent;
+     width: 0.3rem;
+}
+*::-webkit-scrollbar-button{
+  background-color: transparent;
+}
+*::-webkit-scrollbar-thumb{
+  background-color: oklch(0.2795 0.0368 260.0310);
+  border-radius: 3rem;
+}

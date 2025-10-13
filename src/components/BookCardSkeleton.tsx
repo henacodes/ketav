@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function BookCardSkeleton() {
   return (
-    <Card className="overflow-hidden bg-card border-border hover:border-primary/50 transition-colors">
+    <Card className="overflow-hidden bg-card border-border hover:border-primary/50 transition-colors p-0 ">
       <div className="aspect-[2/3] bg-muted relative">
         <Skeleton className="w-full h-full" />
       </div>
