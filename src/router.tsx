@@ -5,6 +5,7 @@ import { HomePage } from "./pages/Home";
 import { StreakPage } from "./pages/Streak";
 import RootLayout from "./layouts/Root";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { GoalsPage } from "./pages/Goals";
 
 export const router = createBrowserRouter([
   {
@@ -27,6 +28,10 @@ export const router = createBrowserRouter([
       {
         path: "streak",
         element: <StreakPage />,
+      },
+      {
+        path: "goals",
+        element: <GoalsPage />,
       },
     ],
   },
