@@ -9,6 +9,7 @@ import {
   Menu,
   Moon,
   Settings,
+  Target,
   TestTube,
   TestTubeDiagonal,
   User,
@@ -23,6 +24,7 @@ export default function RootLayout() {
     { path: "/", label: "Home", icon: BookOpen },
     { path: "/library", label: "Library", icon: Library },
     { path: "/streak", label: "Streak", icon: Flame },
+    { path: "/goals", label: "Goals", icon: Target },
     { path: "/settings", label: "Settings", icon: Settings },
   ];
 

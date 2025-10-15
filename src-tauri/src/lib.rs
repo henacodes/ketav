@@ -27,6 +27,12 @@ pub fn run() {
             sql: include_str!("../migrations/0002_clever_tombstone.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "create_daily_goal_table",
+            sql: include_str!("../migrations/0003_white_cannonball.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::Builder::new().build())
