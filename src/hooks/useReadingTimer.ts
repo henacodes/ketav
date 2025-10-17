@@ -5,6 +5,7 @@ import {
   updateBookStats,
   updateDailyUserStats,
 } from "@/db/services/stats.services";
+import { incrementMinutesReadForBook } from "@/db/services/goals.services";
 
 interface ReadingTrackerOptions {
   bookId: string;
@@ -134,6 +135,7 @@ export function useReadingTracker(
 
     await updateBookStats(minutesIncrement, bookId, day);
     await updateDailyUserStats(minutesIncrement, day);
+    await incrementMinutesReadForBook(bookId);
   }
 
   // Return minutesRead (reactive if requested) and isActive (non-reactive snapshot).

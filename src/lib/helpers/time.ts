@@ -1,3 +1,5 @@
+import { format } from "date-fns";
+
 export function formatMinutesToTime(totalMinutes: number): string {
   if (totalMinutes <= 0) return "0 mins";
 
@@ -13,4 +15,8 @@ export function formatMinutesToTime(totalMinutes: number): string {
   } else {
     return `${minutes} min${minutes > 1 ? "s" : ""}`;
   }
+}
+
+export function today() {
+  return format(new Date(), "yyyy-MM-dd");
 }

@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { useStatsStore } from "@/stores/useStatsStore";
 import Heatmap from "../Heatmap"; // your heatmap component
-import { formatMinutesToTime } from "@/lib/helpers/time";
+import { formatMinutesToTime, today } from "@/lib/helpers/time";
 import { useEffect, useRef } from "react";
 
 export default function BookSummaryDialog() {
@@ -82,11 +82,7 @@ export default function BookSummaryDialog() {
             <small className=" text-muted-foreground  ">
               Scroll to the right to see the whole thing
             </small>
-            <Heatmap
-              endDate={new Date().toISOString().split("T")[0]}
-              data={heatmapData}
-              maxCount={60}
-            />
+            <Heatmap endDate={today()} data={heatmapData} maxCount={60} />
           </div>
         )}
       </DialogContent>

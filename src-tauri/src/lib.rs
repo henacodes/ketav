@@ -27,6 +27,12 @@ pub fn run() {
             sql: include_str!("../migrations/0002_vengeful_owl.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "create_daily_reading_progress",
+            sql: include_str!("../migrations/0003_conscious_boomerang.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::Builder::new().build())

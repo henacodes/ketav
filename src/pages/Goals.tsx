@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -21,98 +22,110 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Target, Plus, BookOpen, Calendar } from "lucide-react";
+import { fetchAllDbBooks } from "@/db/services/books.services";
+import {
+  createDailyReadingGoal,
+  fetchAllGoals,
+  fetchProgressForToday,
+} from "@/db/services/goals.services";
+import { today } from "@/lib/helpers/time";
+import { Book } from "@/db/schema";
+import { useBookCovers } from "@/hooks/useBookCover";
 
 type Goal = {
-  id: string;
+  id: string | number;
   minutesToRead: number;
-  associatedBook?: {
-    bookId: number;
-    title: string;
-    cover: string;
-  };
+  associatedBook?: Book;
   startDate: string;
   endDate?: string;
   todayProgress: number; // minutes read today
 };
 
 export function GoalsPage() {
-  const [goals, setGoals] = useState<Goal[]>([
-    {
-      id: "1",
-      minutesToRead: 30,
-      startDate: "2025-01-15",
-      todayProgress: 18,
-    },
-    {
-      id: "2",
-      minutesToRead: 45,
-      associatedBook: {
-        bookId: 1,
-        title: "The Art of Reading",
-        cover: "/book-cover-art-of-reading.jpg",
-      },
-      startDate: "2025-01-10",
-      endDate: "2025-02-10",
-      todayProgress: 45,
-    },
-    {
-      id: "3",
-      minutesToRead: 60,
-      associatedBook: {
-        bookId: 2,
-        title: "Deep Work",
-        cover: "/deep-work-book-cover.png",
-      },
-      startDate: "2025-01-12",
-      todayProgress: 22,
-    },
-  ]);
-
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [availableBooks, setAvailableBooks] = useState<Book[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newGoal, setNewGoal] = useState({
     minutesToRead: "",
     associatedBook: "",
-    startDate: new Date().toISOString().split("T")[0],
+    startDate: today(),
     endDate: "",
   });
+  const associatedBooks = useMemo(
+    () => goals.map((goal) => goal.associatedBook).filter(Boolean) as Book[],
+    [goals]
+  );
 
-  const availableBooks = [
-    {
-      bookId: 1,
-      title: "The Art of Reading",
-      cover: "/book-cover-art-of-reading.jpg",
-    },
-    {
-      bookId: 2,
-      title: "Digital Minimalism",
-      cover: "/book-cover-digital-minimalism.jpg",
-    },
-    { bookId: 3, title: "Atomic Habits", cover: "/atomic-habits-cover.png" },
-    { bookId: 4, title: "Deep Work", cover: "/deep-work-book-cover.png" },
-  ];
+  const coverImages = useBookCovers(associatedBooks, "image/jpeg");
 
-  const handleCreateGoal = () => {
+  // Load books and goals/progress from DB
+  useEffect(() => {
+    console.log("uperload");
+    async function loadData() {
+      console.log("loadd");
+      const [booksRes, allGoals, todayProgress] = await Promise.all([
+        fetchAllDbBooks(),
+        fetchAllGoals(),
+        fetchProgressForToday(),
+      ]);
+      setAvailableBooks(booksRes);
+
+      // Map goal id to today's progress
+      const progressMap: Record<string | number, number> = {};
+      todayProgress.forEach((p: any) => {
+        progressMap[p.goalId] = p.minutesRead;
+      });
+
+      // Compose final array
+      const combinedGoals: Goal[] = allGoals.map((goal: any) => ({
+        ...goal,
+        associatedBook: goal.associatedBook
+          ? booksRes.find((b: Book) => b.bookId === goal.associatedBook)
+          : undefined,
+        todayProgress: progressMap[goal.id] || 0,
+      }));
+      setGoals(combinedGoals);
+    }
+    loadData();
+  }, []);
+
+  // Create new goal using service function
+  const handleCreateGoal = async () => {
     if (!newGoal.minutesToRead) return;
 
-    const selectedBook = availableBooks.find(
-      (book) => book.bookId.toString() === newGoal.associatedBook
-    );
+    let associatedBookId = "";
+    if (newGoal.associatedBook && newGoal.associatedBook !== "none") {
+      associatedBookId = newGoal.associatedBook;
+    }
 
-    const goal: Goal = {
-      id: Date.now().toString(),
+    await createDailyReadingGoal({
       minutesToRead: Number.parseInt(newGoal.minutesToRead),
-      associatedBook: selectedBook,
+      associatedBook: associatedBookId ? associatedBookId : null,
       startDate: newGoal.startDate,
       endDate: newGoal.endDate || undefined,
-      todayProgress: 0,
-    };
+    });
 
-    setGoals([...goals, goal]);
+    // Reload goals after creating
+    const allGoals = await fetchAllGoals();
+    const todayProgress = await fetchProgressForToday();
+    const progressMap: Record<string | number, number> = {};
+    todayProgress.forEach((p: any) => {
+      progressMap[p.goalId] = p.minutesRead;
+    });
+    const combinedGoals: Goal[] = allGoals.map((goal: any) => ({
+      ...goal,
+      associatedBook: goal.associatedBook
+        ? availableBooks.find((b: Book) => b.bookId === goal.associatedBook)
+        : undefined,
+      todayProgress: progressMap[goal.id] || 0,
+    }));
+    setGoals(combinedGoals);
+
     setDialogOpen(false);
     setNewGoal({
       minutesToRead: "",
       associatedBook: "",
-      startDate: new Date().toISOString().split("T")[0],
+      startDate: today(),
       endDate: "",
     });
   };
@@ -131,7 +144,7 @@ export function GoalsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-8">
+    <div className=" max-w-7xl  mx-auto   p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2 text-foreground">
@@ -240,7 +253,7 @@ export function GoalsPage() {
       </div>
 
       {goals.length === 0 ? (
-        <Card className="p-12 text-center bg-card border-border">
+        <Card className="p-12 text-center bg-card border-border  ">
           <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2 text-foreground">
             No goals yet
@@ -248,7 +261,12 @@ export function GoalsPage() {
           <p className="text-muted-foreground mb-4">
             Create your first reading goal to start tracking progress
           </p>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button
+            onClick={() => {
+              console.log("Hello goal");
+              setDialogOpen(true);
+            }}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Create Goal
           </Button>
@@ -256,22 +274,34 @@ export function GoalsPage() {
       ) : (
         <div className="space-y-4">
           {goals.map((goal) => {
+            let coverSrc = "/epub.svg";
             const progressPercentage = getProgressPercentage(
               goal.todayProgress,
               goal.minutesToRead
             );
+
+            const book = goal.associatedBook;
+
+            if (book) {
+              const bookIndex = associatedBooks.findIndex(
+                (b) => b.bookId === book.bookId
+              );
+              if (coverImages[bookIndex]) {
+                coverSrc = coverImages[bookIndex];
+              }
+            }
             const isCompleted = goal.todayProgress >= goal.minutesToRead;
 
             return (
               <Card
                 key={goal.id}
-                className="p-6 bg-card border-border hover:border-primary/30 transition-colors"
+                className="p-6 bg-card border-border hover:border-primary/30 transition-colors min-w-3xl  "
               >
                 <div className="flex items-start gap-4">
                   {goal.associatedBook ? (
                     <div className="w-16 h-24 rounded overflow-hidden flex-shrink-0 bg-muted">
                       <img
-                        src={goal.associatedBook.cover || "/placeholder.svg"}
+                        src={coverSrc}
                         alt={goal.associatedBook.title}
                         className="w-full h-full object-cover"
                       />
