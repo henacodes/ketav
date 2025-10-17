@@ -33,6 +33,18 @@ pub fn run() {
             sql: include_str!("../migrations/0003_white_cannonball.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "create_daily_goal_table",
+            sql: include_str!("../migrations/0004_boring_masked_marvel.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 5,
+            description: "create_daily_goal_table",
+            sql: include_str!("../migrations/0006_tough_warbound.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::Builder::new().build())

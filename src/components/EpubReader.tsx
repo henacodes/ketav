@@ -12,7 +12,13 @@ interface ReaderProps {
 export default function EpubReader({ epub }: ReaderProps) {
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
   const [htmlContent, setHtmlContent] = useState<string>("<div />");
-  useReadingTracker({ bookId: generateBookId(epub) });
+  useReadingTracker({
+    bookId: generateBookId({
+      title: epub.metadata.title,
+      author: epub.metadata.author,
+      cover: epub.metadata.cover,
+    }),
+  });
 
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const contentRef = useRef<HTMLDivElement | null>(null);

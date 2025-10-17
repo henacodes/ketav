@@ -10,6 +10,7 @@ export const dailyUserStats = sqliteTable("daily_user_stats", {
 });
 
 export const dailyBookStats = sqliteTable("daily_book_stats", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   day: text("day").notNull(), // 'YYYY-MM-DD'
   bookId: text("book_id")
     .notNull()

@@ -36,7 +36,7 @@
     "dompurify": "^3.2.7",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.6",
-    "epubix": "^0.2.5",
+    "epubix": "^0.2.7",
     "jszip": "^3.10.1",
     "lucide-react": "^0.544.0",
     "react": "^19.1.0",

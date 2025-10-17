@@ -1,5 +1,5 @@
 import { DirEntry } from "@tauri-apps/plugin-fs";
-import { loadEpubMetadata } from "epubix";
+import { EpubMetadata, loadEpubMetadata } from "epubix";
 import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { getSettings } from "./settings";
 import type { LibraryEpub } from "../types/epub";
@@ -72,10 +72,16 @@ export function filterTocByChapters(
   return processToc(toc);
 } */
 
-export function generateBookId(book: Epub): string {
-  const title =
-    book.metadata?.title || `${book.chapters.length}` + `${book.toc.length}`; // fallback to chapter and TOC length
-  const author = book.metadata?.author || "";
+type BookIdParams = EpubMetadata & { fileName?: string };
+
+export function generateBookId({
+  title,
+  author,
+  cover,
+  fileName,
+}: BookIdParams): string {
+  title = title || `${cover}` + `${fileName}`; // fallback to chapter and TOC length
+  author = author || "";
   const normalize = (str: string) =>
     str
       .trim()

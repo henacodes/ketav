@@ -156,8 +156,8 @@ export async function getStreakSummary() {
   const today = new Date();
   const diffToToday = differenceInCalendarDays(today, lastReading);
 
-  // only start counting if lastReading is today or yesterday
-  if (diffToToday <= 1) {
+  // only start counting if lastReading is today
+  if (diffToToday === 0) {
     currentStreak = 1; // include lastReading
     for (let i = uniqueDates.length - 1; i > 0; i--) {
       const diff = differenceInCalendarDays(uniqueDates[i], uniqueDates[i - 1]);

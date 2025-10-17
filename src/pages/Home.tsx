@@ -44,7 +44,10 @@ export function HomePage() {
     console.log("openBookopenBook", openBook);
 
     async function saveBookToDb(b: Epub) {
-      const bookId = generateBookId(b);
+      const bookId = generateBookId({
+        title: b.metadata.title,
+        author: b.metadata.author,
+      });
 
       const exists = await db
         .select()
@@ -61,7 +64,7 @@ export function HomePage() {
       console.log("ALREADY SAVED TO DB", bookId, exists);
     }
 
-    saveBookToDb(openBook.book);
+    //saveBookToDb(openBook.book);
   }, [openBook]);
 
   if (openBook?.book) {

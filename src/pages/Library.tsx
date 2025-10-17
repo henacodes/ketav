@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { readDir, BaseDirectory } from "@tauri-apps/plugin-fs";
-import { collectEpubs, filterEpubFiles } from "@/lib/helpers/epub";
+import {
+  collectEpubs,
+  filterEpubFiles,
+  generateBookId,
+} from "@/lib/helpers/epub";
 import type { LibraryEpub } from "@/lib/types/epub";
 import useSettingsStore from "@/stores/useSettingsStore";
 import { BookCardSkeleton } from "@/components/BookCardSkeleton";
@@ -28,6 +32,10 @@ export function LibraryPage() {
 
         const filteredFiles = filterEpubFiles(entries);
         const epubs = await collectEpubs(filteredFiles);
+
+        epubs.forEach((ep) => {
+          const bookId = generateBookId({ ...ep });
+        });
 
         console.log("EPUBWS", epubs);
         setLibraryBooks(epubs);
