@@ -8,44 +8,12 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let migrations = vec![
-        Migration {
-            version: 1,
-            description: "create_initial_tables",
-            sql: include_str!("../migrations/0000_wealthy_hiroim.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 2,
-            description: "book_id_in_daily_stats_is_string",
-            sql: include_str!("../migrations/0001_skinny_dark_beast.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 3,
-            description: "remove_user_id_column",
-            sql: include_str!("../migrations/0002_clever_tombstone.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 4,
-            description: "create_daily_goal_table",
-            sql: include_str!("../migrations/0003_white_cannonball.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 5,
-            description: "create_daily_goal_table",
-            sql: include_str!("../migrations/0004_boring_masked_marvel.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 5,
-            description: "create_daily_goal_table",
-            sql: include_str!("../migrations/0006_tough_warbound.sql"),
-            kind: MigrationKind::Up,
-        },
-    ];
+    let migrations = vec![Migration {
+        version: 1,
+        description: "create_initial_tables",
+        sql: include_str!("../migrations/0000_modern_omega_flight.sql"),
+        kind: MigrationKind::Up,
+    }];
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
