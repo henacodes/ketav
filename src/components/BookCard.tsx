@@ -3,13 +3,16 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useReaderStore } from "@/stores/useReaderStore";
 import { useNavigate } from "react-router";
+import { Book } from "@/db/schema";
 
 export default function BookCard({
   book,
   index,
+  imgSrc,
 }: {
-  book: LibraryEpub;
+  book: Book;
   index: number;
+  imgSrc?: string;
 }) {
   const setOpenBook = useReaderStore((state) => state.setOpenBook);
   const navigate = useNavigate();
@@ -25,9 +28,9 @@ export default function BookCard({
       className="overflow-hidden bg-card border-border hover:border-primary/50 transition-colors p-0 "
     >
       <div className="aspect-[2/3] bg-muted relative">
-        {book.coverBase64 ? (
+        {imgSrc ? (
           <img
-            src={book.coverBase64}
+            src={imgSrc}
             alt={book.title}
             className="w-full h-full object-cover"
           />

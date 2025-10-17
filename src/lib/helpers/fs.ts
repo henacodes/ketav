@@ -1,5 +1,64 @@
-import { BaseDirectory, create, exists, mkdir } from "@tauri-apps/plugin-fs";
+import {
+  BaseDirectory,
+  create,
+  exists,
+  mkdir,
+  readDir,
+} from "@tauri-apps/plugin-fs";
 import { BOOK_COVER_IMAGE_FOLDER } from "../constants";
+import useSettingsStore from "@/stores/useSettingsStore";
+
+import {
+  collectEpubs,
+  filterEpubFiles,
+  generateBookId,
+} from "@/lib/helpers/epub";
+import { registerBook } from "@/db/services/books.services";
+import { Settings } from "../types/settings";
+
+export async function syncBooksInFileSystemWithDb({
+  settings,
+}: {
+  settings: Settings | null;
+}) {
+  try {
+    if (!settings?.libraryFolderPath) return;
+
+    console.log("LIBRARY FOLDER", settings.libraryFolderPath);
+    const entries = await readDir(settings.libraryFolderPath, {
+      baseDir: BaseDirectory.Document,
+    });
+
+    const filteredFiles = filterEpubFiles(entries);
+    const epubs = await collectEpubs(filteredFiles);
+
+    epubs.forEach(async (epub) => {
+      const bookId = generateBookId({ ...epub });
+      // console.log("book ", ep.title, bookId);
+      let imgPath = "";
+
+      if (epub.coverBase64) {
+        try {
+          imgPath = await saveImage(epub.coverBase64, epub.fileName);
+          console.log("image path", imgPath);
+        } catch (error: any) {
+          console.log("Failed to save the image", error);
+        }
+      }
+
+      console.log("file name", epub.fileName);
+      await registerBook({
+        title: epub.title || "",
+        author: epub.author || "",
+        bookId,
+        coverImagePath: imgPath,
+        fileName: epub.fileName,
+      });
+    });
+  } catch (error) {
+    console.error("Failed to read library:", error);
+  }
+}
 
 export async function saveImage(base64Data: string, fileName: string) {
   const binary = base64ToUint8Array(base64Data);

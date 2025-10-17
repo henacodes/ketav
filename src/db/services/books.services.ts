@@ -8,3 +8,9 @@ export async function registerBook(input: InsertBook) {
     console.log("Failed to register a book: ", error);
   }
 }
+
+export async function fetchAllDbBooks() {
+  const res = await db.select().from(books);
+
+  return res;
+}

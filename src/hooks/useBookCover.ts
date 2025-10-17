@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
+import { LibraryEpub } from "@/lib/types/epub";
+import { Book } from "@/db/schema";
 
 function uint8ToBase64(u8: Uint8Array) {
   let binary = "";
@@ -9,10 +11,7 @@ function uint8ToBase64(u8: Uint8Array) {
   return window.btoa(binary);
 }
 
-export function useBookCovers(
-  books: { coverImagePath?: string }[],
-  mimeType = "image/png"
-) {
+export function useBookCovers(books: Book[], mimeType = "image/png") {
   const [coverUrls, setCoverUrls] = useState<(string | undefined)[]>([]);
 
   useEffect(() => {
