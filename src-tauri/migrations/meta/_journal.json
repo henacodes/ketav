@@ -8,6 +8,20 @@
       "when": 1760685825202,
       "tag": "0000_modern_omega_flight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1760697413259,
+      "tag": "0001_nappy_earthquake",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1760701555584,
+      "tag": "0002_vengeful_owl",
+      "breakpoints": true
     }
   ]
 }

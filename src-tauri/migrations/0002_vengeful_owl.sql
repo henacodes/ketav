@@ -1,0 +1,1 @@
+ALTER TABLE `books` ADD `file_name` text NOT NULL;

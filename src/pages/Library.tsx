@@ -11,6 +11,9 @@ import { BookCardSkeleton } from "@/components/BookCardSkeleton";
 import { Link } from "react-router";
 import { MoveRight } from "lucide-react";
 import BookCard from "@/components/BookCard";
+import { saveImage } from "@/lib/helpers/fs";
+import { InsertBook } from "@/db/schema";
+import { registerBook } from "@/db/services/books.services";
 
 export function LibraryPage() {
   const [libraryBooks, setLibraryBooks] = useState<LibraryEpub[]>([]);
@@ -33,11 +36,30 @@ export function LibraryPage() {
         const filteredFiles = filterEpubFiles(entries);
         const epubs = await collectEpubs(filteredFiles);
 
-        epubs.forEach((ep) => {
-          const bookId = generateBookId({ ...ep });
+        epubs.forEach(async (epub) => {
+          const bookId = generateBookId({ ...epub });
+          // console.log("book ", ep.title, bookId);
+          let imgPath = "";
+
+          if (epub.coverBase64) {
+            try {
+              imgPath = await saveImage(epub.coverBase64, epub.fileName);
+              console.log("image path", imgPath);
+            } catch (error: any) {
+              console.log("Failed to save the image", error);
+            }
+          }
+
+          console.log("file name", epub.fileName);
+          await registerBook({
+            title: epub.title || "",
+            author: epub.author || "",
+            bookId,
+            coverImagePath: imgPath,
+            fileName: epub.fileName,
+          });
         });
 
-        console.log("EPUBWS", epubs);
         setLibraryBooks(epubs);
       } catch (error) {
         console.error("Failed to read library:", error);
@@ -51,6 +73,10 @@ export function LibraryPage() {
 
   return (
     <div className="  p-8">
+      <img
+        src="/home/kirakos/.local/share/com.kirakos.ketav/covers/The_Resurrection of Jesus (_ (Z-Library).jpeg"
+        alt=""
+      />
       <h1 className="text-3xl font-bold mb-2 text-foreground">My Library</h1>
       <p className="text-muted-foreground mb-8">Your personal collection</p>
       {libraryBooks.length === 0 && !loading && (

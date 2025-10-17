@@ -25,6 +25,22 @@
         }
       ]
     },
+      {
+      "identifier": "fs:allow-appdata-read-recursive",
+      "allow": [
+        {
+          "path": "$APPDATA/*"
+        }
+      ]
+    },
+     {
+      "identifier": "fs:allow-appdata-write-recursive",
+      "allow": [
+        {
+          "path": "$APPDATA/*"
+        }
+      ]
+    },
     "fs:allow-resource-read-recursive",
     "fs:allow-resource-write-recursive",
     "fs:scope-resource-recursive",
