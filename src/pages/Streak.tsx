@@ -3,7 +3,6 @@ import {
   getDailyUserStatsForLastDays,
   getStreakSummary,
   getBooksForDay,
-  seedRandomDailyUserStats,
   getLastYearUserStats,
 } from "@/db/services/stats.services";
 import { Flame, Calendar, Target, TrendingUp } from "lucide-react";

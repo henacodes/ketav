@@ -8,7 +8,7 @@ import {
 import { useStatsStore } from "@/stores/useStatsStore";
 import Heatmap from "../Heatmap"; // your heatmap component
 import { formatMinutesToTime, today } from "@/lib/helpers/time";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 export default function BookSummaryDialog() {
   const { bookStatsSummary, closeBookStatsDialog } = useStatsStore(

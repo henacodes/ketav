@@ -7,12 +7,9 @@ import {
   Flame,
   Library,
   Menu,
-  Moon,
   Settings,
   Target,
-  TestTube,
   TestTubeDiagonal,
-  User,
 } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";

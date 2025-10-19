@@ -1,71 +1,10 @@
 import EpubReader from "@/components/EpubReader";
 import { useReaderStore } from "@/stores/useReaderStore";
-import { useEffect } from "react";
 import { Link } from "react-router";
-import { BookAlert, ArrowRight, MoveRight } from "lucide-react";
-import { db } from "@/db/";
-import { generateBookId } from "@/lib/helpers/epub";
-import { Epub } from "epubix";
-import { books } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import TestReader from "@/components/TestReader";
-
-import {
-  isPermissionGranted,
-  requestPermission,
-  sendNotification,
-} from "@tauri-apps/plugin-notification";
+import { BookAlert, MoveRight } from "lucide-react";
 
 export function HomePage() {
   const { openBook } = useReaderStore();
-
-  /*   useEffect(() => {
-    async function sendNotif() {
-      // Do you have permission to send a notification?
-      let permissionGranted = await isPermissionGranted();
-
-      // If not we need to request it
-      if (!permissionGranted) {
-        const permission = await requestPermission();
-        permissionGranted = permission === "granted";
-      }
-
-      // Once permission has been granted we can send the notification
-      if (permissionGranted) {
-        sendNotification({ title: "Tauri", body: "Tauri is awesome!" });
-      }
-    }
-
-    //sendNotif();
-  });
- */
-  useEffect(() => {
-    if (!openBook) return;
-    console.log("openBookopenBook", openBook);
-
-    async function saveBookToDb(b: Epub) {
-      const bookId = generateBookId({
-        title: b.metadata.title,
-        author: b.metadata.author,
-      });
-
-      const exists = await db
-        .select()
-        .from(books)
-        .where(eq(books.bookId, bookId));
-      if (!exists.length) {
-        const { metadata } = b;
-        await db.insert(books).values({
-          bookId,
-          title: metadata?.title || "Untitled",
-          author: metadata?.author || "John Doe",
-        });
-      }
-      console.log("ALREADY SAVED TO DB", bookId, exists);
-    }
-
-    //saveBookToDb(openBook.book);
-  }, [openBook]);
 
   if (openBook?.book) {
     return <EpubReader epub={openBook?.book} />;

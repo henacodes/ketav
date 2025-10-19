@@ -1,9 +1,9 @@
 import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "..";
 import { dailyReadingGoal, dailyReadingProgress, InsertGoals } from "../schema";
-import { format } from "date-fns";
 import { today } from "@/lib/helpers/time";
 
+//// FIXME: prevent from creating more than one general reading goal
 export async function createDailyReadingGoal(goal: InsertGoals) {
   // Check if a goal for this book already exists
   const existing = await db
@@ -46,6 +46,7 @@ export async function createDailyReadingProgress(goalId: number, date: string) {
     minutesRead: 0,
   });
 }
+
 export async function incrementMinutesReadForBook(
   bookId: string,
   incrementBy: number = 1

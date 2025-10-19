@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
-import { LibraryEpub } from "@/lib/types/epub";
 import { Book } from "@/db/schema";
 
 function uint8ToBase64(u8: Uint8Array) {

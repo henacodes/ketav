@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { parseISO, subDays, format, isSameDay } from "date-fns";
 import {
   Tooltip,

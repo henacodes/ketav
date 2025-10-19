@@ -3,7 +3,6 @@ import { EpubMetadata, loadEpubMetadata } from "epubix";
 import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { getSettings } from "./settings";
 import type { LibraryEpub } from "../types/epub";
-import { Epub } from "epubix";
 
 export function filterEpubFiles(files: DirEntry[]) {
   return files.filter((file) => file.isFile && file.name.endsWith(".epub"));

@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Moon, Bell, Eye, Download, FolderOpen, Terminal } from "lucide-react";
+import { Moon, Bell, FolderOpen, Terminal } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import useSettingsStore from "@/stores/useSettingsStore";
 import { documentDir, normalize, join } from "@tauri-apps/api/path";

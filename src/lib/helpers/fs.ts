@@ -6,7 +6,6 @@ import {
   readDir,
 } from "@tauri-apps/plugin-fs";
 import { BOOK_COVER_IMAGE_FOLDER } from "../constants";
-import useSettingsStore from "@/stores/useSettingsStore";
 
 import {
   collectEpubs,
