@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useReaderStore } from "@/stores/useReaderStore";
 import { useNavigate } from "react-router";
 import { Book } from "@/db/schema";
+import { trimBookTitle } from "@/lib/helpers/epub";
 
 export default function BookCard({
   book,
@@ -52,8 +53,8 @@ export default function BookCard({
                 */}
       </div>
       <div className="p-4">
-        <h3 className="font-semibold text-foreground mb-1 line-clamp-1">
-          {book.title}
+        <h3 className="font-semibold text-foreground mb-1 ">
+          {trimBookTitle(book.title)}
         </h3>
         <p className="text-sm text-muted-foreground mb-3">{book.author}</p>
 

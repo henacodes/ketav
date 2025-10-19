@@ -9,6 +9,7 @@ import { useStatsStore } from "@/stores/useStatsStore";
 import Heatmap from "../Heatmap"; // your heatmap component
 import { formatMinutesToTime, today } from "@/lib/helpers/time";
 import { useRef } from "react";
+import { trimBookTitle } from "@/lib/helpers/epub";
 
 export default function BookSummaryDialog() {
   const { bookStatsSummary, closeBookStatsDialog } = useStatsStore(
@@ -40,7 +41,9 @@ export default function BookSummaryDialog() {
     >
       <DialogContent className="">
         <DialogHeader>
-          <DialogTitle>{bookStatsSummary.book.title} </DialogTitle>
+          <DialogTitle>
+            {trimBookTitle(bookStatsSummary.book.title)}{" "}
+          </DialogTitle>
           <DialogDescription>
             This is a summary of your reading stats for this book.
           </DialogDescription>

@@ -60,3 +60,17 @@ export function generateBookId({
 
   return `${combined}_${shortHash}`;
 }
+
+export function trimBookTitle(title: string, maxLength = 50): string {
+  if (title.length <= maxLength) return title;
+
+  // Trim to max length
+  let trimmed = title.slice(0, maxLength);
+
+  // Avoid cutting words in half — trim back to last space if possible
+  const lastSpace = trimmed.lastIndexOf(" ");
+  if (lastSpace > 0) trimmed = trimmed.slice(0, lastSpace);
+
+  // Append ellipsis to show it was shortened
+  return trimmed + "…";
+}

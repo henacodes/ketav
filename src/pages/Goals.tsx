@@ -30,6 +30,7 @@ import {
 import { today } from "@/lib/helpers/time";
 import { Book } from "@/db/schema";
 import { useBookCovers } from "@/hooks/useBookCover";
+import { trimBookTitle } from "@/lib/helpers/epub";
 
 type Goal = {
   id: string | number;
@@ -205,8 +206,9 @@ export function GoalsPage() {
                       <SelectItem
                         key={book.bookId}
                         value={book.bookId.toString()}
+                        className=" line-clamp-2 "
                       >
-                        {book.title}
+                        {trimBookTitle(book.title)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -314,7 +316,7 @@ export function GoalsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-foreground mb-1">
+                        <h3 className="font-semibold text-foreground mb-1 line-clamp-2 ">
                           {goal.associatedBook
                             ? goal.associatedBook.title
                             : "General Reading Goal"}

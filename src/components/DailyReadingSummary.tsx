@@ -5,6 +5,7 @@ import { Book, DailyBookRecord } from "@/db/schema";
 import { getBookReadDaysLastYear } from "@/db/services/stats.services";
 import { useStatsStore } from "@/stores/useStatsStore";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
+import { trimBookTitle } from "@/lib/helpers/epub";
 
 type BookReadingSession = {
   book: Book;
@@ -68,7 +69,7 @@ export function DailyReadingSummary({
             className="flex items-center justify-between py-3 border-b border-border last:border-0"
           >
             <span className="text-foreground font-medium">
-              {session.book.title}
+              {trimBookTitle(session.book.title)}
             </span>
             <div className=" flex items-center gap-6   ">
               <div className="flex items-center gap-2 text-muted-foreground">
