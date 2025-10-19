@@ -299,11 +299,11 @@ export function GoalsPage() {
                 className="p-6 bg-card border-border hover:border-primary/30 transition-colors min-w-3xl  "
               >
                 <div className="flex items-start gap-4">
-                  {goal.associatedBook ? (
+                  {book ? (
                     <div className="w-16 h-24 rounded overflow-hidden flex-shrink-0 bg-muted">
                       <img
                         src={coverSrc}
-                        alt={goal.associatedBook.title}
+                        alt={book.title}
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -317,8 +317,8 @@ export function GoalsPage() {
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h3 className="font-semibold text-foreground mb-1 line-clamp-2 ">
-                          {goal.associatedBook
-                            ? goal.associatedBook.title
+                          {book
+                            ? trimBookTitle(book.title)
                             : "General Reading Goal"}
                         </h3>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
