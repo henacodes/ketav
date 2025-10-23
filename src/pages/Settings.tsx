@@ -133,22 +133,24 @@ export function SettingsPage() {
         </Card>
 
         {/* Notifications */}
-        <Card className="p-6 bg-card border-border">
+        <Card className="p-6 bg-card border-border  ">
           <h2 className="text-xl font-semibold mb-4 text-foreground">
             Notifications
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-4  ">
             <div className="flex items-center justify-between gap-11  ">
               <div className="flex items-center gap-3">
-                <Bell className="w-5 h-5 text-primary" />
+                <Bell className="w-5 h-5 text-foreground   " />
                 <div>
-                  <Label className="text-foreground">Reading Reminders</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <Label className="text-foreground  ">
+                    Reading Reminders (working on it yet)
+                  </Label>
+                  <p className="text-sm text-muted-foreground my-1 ">
                     Get notified to maintain your streak
                   </p>
                 </div>
               </div>
-              <Switch />
+              <Switch disabled={true} />
             </div>
           </div>
         </Card>

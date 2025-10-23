@@ -81,8 +81,8 @@ importers:
         specifier: ^0.44.6
         version: 0.44.6(@libsql/client@0.15.15)
       epubix:
-        specifier: ^0.2.5
-        version: 0.2.5(@types/node@24.6.2)(rollup@4.52.4)(typescript@5.8.3)(vite@7.1.9(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1))
+        specifier: ^0.2.7
+        version: 0.2.7(@types/node@24.6.2)(rollup@4.52.4)(typescript@5.8.3)(vite@7.1.9(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1))
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
@@ -107,6 +107,9 @@ importers:
       tailwindcss:
         specifier: ^4.1.14
         version: 4.1.14
+      vaul:
+        specifier: ^1.1.2
+        version: 1.1.2(@types/react-dom@19.2.0(@types/react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       zustand:
         specifier: ^5.0.8
         version: 5.0.8(@types/react@19.2.0)(react@19.2.0)
@@ -1629,8 +1632,8 @@ packages:
     resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
     engines: {node: '>=0.12'}
 
-  epubix@0.2.5:
-    resolution: {integrity: sha512-F6V/XtZ8AfnHsjC70vdV9COav0YS6VrYyRUBCz5kSVgMomJAAckjYES5uSnyrVdrV6h41TRrS2UvCyeBMVAS6Q==}
+  epubix@0.2.7:
+    resolution: {integrity: sha512-UIp5ntoYTm/MmG8TcS94yFlhnaGnfTrUVsaNhSC3AxMOu1LGclek5N+DpJlsfcvVDjgCBe8mShQZnCjm/0TH2Q==}
 
   esbuild-register@3.6.0:
     resolution: {integrity: sha512-H2/S7Pm8a9CL1uhp9OvjwrBh5Pvx0H8qVOxNu8Wed9Y7qv56MPtq+GGM8RJpq6glYJn9Wspr8uw7l55uyinNeg==}
@@ -2152,6 +2155,12 @@ packages:
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
+
+  vaul@1.1.2:
+    resolution: {integrity: sha512-ZFkClGpWyI2WUQjdLJ/BaGuV6AVQiJ3uELGk3OYtP+B6yCO7Cmn9vPFXVJkRaGkOJu3m8bQMgtyzNHixULceQA==}
+    peerDependencies:
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc
 
   vite-plugin-dts@4.5.4:
     resolution: {integrity: sha512-d4sOM8M/8z7vRXHHq/ebbblfaxENjogAAekcfcDCCwAyvGqnPrc7f4NZbvItS+g4WTgerW0xDwSz5qz11JT3vg==}
@@ -3461,7 +3470,7 @@ snapshots:
 
   entities@4.5.0: {}
 
-  epubix@0.2.5(@types/node@24.6.2)(rollup@4.52.4)(typescript@5.8.3)(vite@7.1.9(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)):
+  epubix@0.2.7(@types/node@24.6.2)(rollup@4.52.4)(typescript@5.8.3)(vite@7.1.9(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)):
     dependencies:
       jszip: 3.10.1
       vite-plugin-dts: 4.5.4(@types/node@24.6.2)(rollup@4.52.4)(typescript@5.8.3)(vite@7.1.9(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1))
@@ -3982,6 +3991,15 @@ snapshots:
       '@types/react': 19.2.0
 
   util-deprecate@1.0.2: {}
+
+  vaul@1.1.2(@types/react-dom@19.2.0(@types/react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+    dependencies:
+      '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.2.0(@types/react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
 
   vite-plugin-dts@4.5.4(@types/node@24.6.2)(rollup@4.52.4)(typescript@5.8.3)(vite@7.1.9(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)):
     dependencies:

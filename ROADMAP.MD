@@ -21,14 +21,14 @@ Each phase represents a milestone toward a stable, production-ready release.
 
 > Goal: Fix bugs and unexpected results
 
-- [ ] Broken img tags get replaced by a working img with base 64
-- [ ] Show error messsage when a book can't be loaded in case of deletion from files, or when library path has been changed
-- [ ] Prevent user from creating more than one General reading goal
-- [ ] Remove Unimplemented UI components if they are not planned to be implmented in the next minor version
+- [x] Broken img tags get replaced by a working img with base 64
+- [x] Show error messsage when a book can't be loaded in case of deletion from files, or when library path has been changed
+- [x] Prevent user from creating more than one General reading goal
+- [x] Remove Unimplemented UI components if they are not planned to be implmented in the next minor version
 - [ ] More responsiveness
 - [ ] Either make the in-book table of contents work or make the link not redirect
-- [ ] Add some margin between paragraphs
-- [ ] Fix the menu items' accent color isnt contrasting well
+- [x] Add some margin between paragraphs
+- [x] Fix the menu items' accent color isnt contrasting well
 
 ## v0.3.x - Customizable reader page and more
 

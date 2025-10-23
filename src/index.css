@@ -188,3 +188,7 @@
   background-color: oklch(0.2795 0.0368 260.0310);
   border-radius: 3rem;
 }
+
+.epub-reader-container p {
+  margin: 2rem 0 1rem 0;
+}

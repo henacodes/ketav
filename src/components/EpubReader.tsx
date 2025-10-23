@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Epub, TocEntry } from "epubix";
 import { Button } from "./ui/button";
-import { Bookmark } from "lucide-react";
+import { Bookmark, TableOfContents } from "lucide-react";
 import { useReadingTracker } from "@/hooks/useReadingTimer";
 import { generateBookId, prepareChapterHtml } from "@/lib/helpers/epub";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 interface ReaderProps {
   epub: Epub;
@@ -27,6 +33,9 @@ export default function EpubReader({ epub }: ReaderProps) {
 
   const chapterCleanupRef = useRef<(() => Promise<void>) | null>(null);
   const loadCounterRef = useRef(0);
+
+  // drawer state for small screens
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // When the epub instance changes (opening a different book), immediately:
   //  - mark any in-flight loads stale
@@ -192,6 +201,8 @@ export default function EpubReader({ epub }: ReaderProps) {
   function onSelectHref(href?: string) {
     if (!href) return;
     setSelectedHref(href);
+    // if the drawer is open (small screen), close it after selecting
+    if (drawerOpen) setDrawerOpen(false);
   }
 
   useEffect(() => {
@@ -209,7 +220,7 @@ export default function EpubReader({ epub }: ReaderProps) {
     rendered = new Set<string>()
   ) {
     return (
-      <ul className="space-y-1 m-0 p-0 list-none  ">
+      <ul className="space-y-1 m-0 p-0 list-none">
         {entries.map((entry, idx) => {
           const key = tocKey(path, idx);
           const hasChildren = !!(entry.children && entry.children.length > 0);
@@ -280,8 +291,8 @@ export default function EpubReader({ epub }: ReaderProps) {
 
   return (
     <div className="flex h-full">
-      {/* Sidebar TOC (left) */}
-      <aside className="w-72 border-r border-border bg-card overflow-auto">
+      {/* Sidebar TOC (left) - hidden on small screens */}
+      <aside className="w-72 border-r border-border bg-card overflow-auto hidden md:block">
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4">
           <h2 className="text-sm font-semibold text-foreground">
             Table of Contents
@@ -299,10 +310,40 @@ export default function EpubReader({ epub }: ReaderProps) {
         </nav>
       </aside>
 
+      {/* Drawer for small screens */}
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <DrawerContent className="bg-card border-border">
+          <DrawerHeader>
+            <DrawerTitle>Table of Contents</DrawerTitle>
+          </DrawerHeader>
+
+          <nav className="p-4 space-y-1 overflow-auto max-h-[70vh]">
+            {epub.toc && epub.toc.length > 0 ? (
+              renderToc(epub.toc)
+            ) : (
+              <div className="px-4 py-3 text-muted-foreground">
+                No Table of Contents
+              </div>
+            )}
+          </nav>
+        </DrawerContent>
+      </Drawer>
+
       {/* Viewer */}
-      <div className="flex-1 flex flex-col   ">
-        <header className="flex  items-center justify-between px-6 py-4 border-b border-border bg-card">
+      <div className="flex-1 flex flex-col">
+        <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
           <div className="flex items-center gap-3">
+            {/* Drawer open button visible on small screens */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Open table of contents"
+            >
+              <TableOfContents className="w-5 h-5" />
+            </Button>
+
             <Button
               variant="outline"
               size="icon"
@@ -330,20 +371,20 @@ export default function EpubReader({ epub }: ReaderProps) {
             </div>
           </div>
 
-          <Button
+          {/*    <Button
             variant="ghost"
             size="sm"
             className="text-primary hover:text-primary/80"
           >
             <Bookmark className="w-4 h-4 mr-2" />
             Bookmark
-          </Button>
+          </Button> */}
         </header>
 
-        <div className="flex-1  p-6 bg-card     ">
+        <div className="flex-1 p-6 bg-card">
           <div
             ref={contentRef}
-            className="max-w-7xl mx-auto  overflow-auto max-h-[81.4vh] font-serif leading-relaxed space-y-6 "
+            className="max-w-7xl mx-auto overflow-auto max-h-[81.4vh] font-serif leading-relaxed space-y-6 epub-reader-container"
             style={{ fontSize: `${fontSize}px` }}
           >
             <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
