@@ -163,6 +163,67 @@ export default function EpubReader({ epub }: ReaderProps) {
     }
   }
 
+  // Intercept clicks inside the rendered EPUB content so links (including the TOC page)
+  // that point to relative EPUB resources/chapter hrefs are handled by the app.
+  // This prevents the browser from attempting to navigate relative to the page origin
+  // (which would break resources) and lets us resolve hrefs via epub.resolveHref/getChapterByHref.
+  useEffect(() => {
+    const container = contentRef.current;
+    if (!container) return;
+
+    function isExternalHref(href: string) {
+      // treat schemes like http:, https:, mailto:, tel:, data:, blob:, file: as external
+      return /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href);
+    }
+
+    const handleClick = (ev: MouseEvent) => {
+      const target = ev.target as HTMLElement | null;
+      if (!target) return;
+      const anchor = target.closest("a") as HTMLAnchorElement | null;
+      if (!anchor) return;
+      const rawHref = anchor.getAttribute("href");
+      if (!rawHref) return;
+
+      // allow user to open in new tab/window
+      if (
+        anchor.target === "_blank" ||
+        ev.metaKey ||
+        ev.ctrlKey ||
+        ev.shiftKey
+      ) {
+        return;
+      }
+
+      // external links - let browser handle them
+      if (isExternalHref(rawHref)) {
+        return;
+      }
+
+      // Prevent default navigation and handle internally
+      ev.preventDefault();
+
+      // fragment-only link (same document)
+      if (rawHref.startsWith("#")) {
+        const frag = rawHref.slice(1);
+        scrollToFragment(frag);
+        return;
+      }
+
+      // Otherwise, treat as an EPUB href. Use the app loader so images/resources are resolved properly.
+      // setSelectedHref accepts the raw href (relative or absolute inside EPUB) and loadContentForHref
+      // will call epub.resolveHref to find the normalized path and load it.
+      setSelectedHref(rawHref);
+
+      // If we're on small-screen drawer, close it after selection for better UX
+      if (drawerOpen) setDrawerOpen(false);
+    };
+
+    container.addEventListener("click", handleClick);
+    return () => {
+      container.removeEventListener("click", handleClick);
+    };
+  }, [contentRef, epub, drawerOpen]);
+
   // escape fallback HTML
   function escapeHtml(s: string) {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
