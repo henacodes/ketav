@@ -25,8 +25,8 @@ Each phase represents a milestone toward a stable, production-ready release.
 - [x] Show error messsage when a book can't be loaded in case of deletion from files, or when library path has been changed
 - [x] Prevent user from creating more than one General reading goal
 - [x] Remove Unimplemented UI components if they are not planned to be implmented in the next minor version
-- [ ] More responsiveness
-- [ ] Either make the in-book table of contents work or make the link not redirect
+- [x] More responsiveness
+- [x] Either make the in-book table of contents work or make the link not redirect
 - [x] Add some margin between paragraphs
 - [x] Fix the menu items' accent color isnt contrasting well
 

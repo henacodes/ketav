@@ -7,7 +7,11 @@ export function HomePage() {
   const { openBook, error } = useReaderStore();
 
   if (openBook?.book) {
-    return <EpubReader epub={openBook.book} />;
+    return (
+      <div className=" h-[87vh]   ">
+        <EpubReader epub={openBook.book} />
+      </div>
+    );
   }
 
   return (

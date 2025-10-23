@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Epub, TocEntry } from "epubix";
 import { Button } from "./ui/button";
-import { Bookmark, TableOfContents } from "lucide-react";
+import { TableOfContents } from "lucide-react";
 import { useReadingTracker } from "@/hooks/useReadingTimer";
 import { generateBookId, prepareChapterHtml } from "@/lib/helpers/epub";
 import {
@@ -204,18 +204,18 @@ export default function EpubReader({ epub }: ReaderProps) {
 
       // fragment-only link (same document)
       if (rawHref.startsWith("#")) {
-        const frag = rawHref.slice(1);
-        scrollToFragment(frag);
+        /*  const frag = rawHref.slice(1);
+        scrollToFragment(frag); */
         return;
       }
 
       // Otherwise, treat as an EPUB href. Use the app loader so images/resources are resolved properly.
       // setSelectedHref accepts the raw href (relative or absolute inside EPUB) and loadContentForHref
       // will call epub.resolveHref to find the normalized path and load it.
-      setSelectedHref(rawHref);
+      //setSelectedHref(rawHref);
 
       // If we're on small-screen drawer, close it after selection for better UX
-      if (drawerOpen) setDrawerOpen(false);
+      //if (drawerOpen) setDrawerOpen(false);
     };
 
     container.addEventListener("click", handleClick);
@@ -391,7 +391,7 @@ export default function EpubReader({ epub }: ReaderProps) {
       </Drawer>
 
       {/* Viewer */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col  h-full   ">
         <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
           <div className="flex items-center gap-3">
             {/* Drawer open button visible on small screens */}
@@ -442,7 +442,7 @@ export default function EpubReader({ epub }: ReaderProps) {
           </Button> */}
         </header>
 
-        <div className="flex-1 p-6 bg-card">
+        <div className="flex-1 p-6 bg-card  ">
           <div
             ref={contentRef}
             className="max-w-7xl mx-auto overflow-auto max-h-[81.4vh] font-serif leading-relaxed space-y-6 epub-reader-container"

@@ -411,14 +411,12 @@ export async function prepareChapterHtml(opts: {
 
       if (!fileBuffer) {
         // try alternative lookups: sometimes normalizedPath lacks opfFolder or encoding differs
-        let triedAlternatives = false;
 
         // Try decodeURIComponent/encodeURIComponent variants
         try {
           const decoded = decodeURIComponent(normalizedPath);
           if (decoded !== normalizedPath) {
             fileBuffer = await epub.getFile(decoded);
-            triedAlternatives = true;
           }
         } catch {
           // ignore
@@ -435,7 +433,6 @@ export async function prepareChapterHtml(opts: {
           );
           try {
             fileBuffer = await epub.getFile(candidate);
-            triedAlternatives = true;
             if (fileBuffer) {
               // Normalize to candidate so cache keys match actual zip entry path
               // But be careful: we should use the actual zip entry path as the key
@@ -538,7 +535,6 @@ export async function prepareChapterHtml(opts: {
           (u.node as Element).setAttribute("srcset", rebuilt);
         } else if (u.attr === "style") {
           // Replace url(...) occurrences in the inline style attribute that match the original
-          const original = u.original;
           const styleVal = (u.node as Element).getAttribute("style") || "";
           const newStyle = styleVal.replace(
             cssUrlRegex,
