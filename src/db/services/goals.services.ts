@@ -3,16 +3,31 @@ import { db } from "..";
 import { dailyReadingGoal, dailyReadingProgress, InsertGoals } from "../schema";
 import { today } from "@/lib/helpers/time";
 
-//// FIXME: prevent from creating more than one general reading goal
+//// FIXED: prevent creating more than one general reading goal
 export async function createDailyReadingGoal(goal: InsertGoals) {
-  // Check if a goal for this book already exists
-  const existing = await db
-    .select()
-    .from(dailyReadingGoal)
-    .where(eq(dailyReadingGoal.associatedBook, goal.associatedBook || ""));
-  if (existing.length > 0) {
-    throw new Error("A daily reading goal for this book already exists.");
+  let existing;
+
+  if (goal.associatedBook) {
+    // Check if a goal for this specific book already exists
+    existing = await db
+      .select()
+      .from(dailyReadingGoal)
+      .where(eq(dailyReadingGoal.associatedBook, goal.associatedBook));
+    if (existing.length > 0) {
+      throw new Error("A daily reading goal for this book already exists.");
+    }
+  } else {
+    // Check if a general goal (no book associated) already exists
+    existing = await db
+      .select()
+      .from(dailyReadingGoal)
+      .where(isNull(dailyReadingGoal.associatedBook));
+    if (existing.length > 0) {
+      throw new Error("A general daily reading goal already exists.");
+    }
   }
+
+  // Create the new goal
   return await db.insert(dailyReadingGoal).values(goal);
 }
 

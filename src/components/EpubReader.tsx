@@ -28,6 +28,40 @@ export default function EpubReader({ epub }: ReaderProps) {
   const chapterCleanupRef = useRef<(() => Promise<void>) | null>(null);
   const loadCounterRef = useRef(0);
 
+  // When the epub instance changes (opening a different book), immediately:
+  //  - mark any in-flight loads stale
+  //  - run the previous chapter cleanup (revoke blobs / decrement refs)
+  //  - clear the displayed HTML so old images don't remain visible
+  //  - clear selectedHref so firstTocHref effect can set the new initial href
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      // make any in-flight loads stale
+      loadCounterRef.current++;
+
+      // cleanup previous chapter resources (if any)
+      if (chapterCleanupRef.current) {
+        try {
+          await chapterCleanupRef.current();
+        } catch {
+          // ignore cleanup errors
+        }
+        chapterCleanupRef.current = null;
+      }
+
+      // clear UI immediately so previous book content (images) disappear
+      if (mounted) {
+        setHtmlContent("<div />");
+        setSelectedHref(null);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [epub]);
+
   // stable key for TOC items based on tree path
   const tocKey = (path: string, idx: number) =>
     path ? `${path}-${idx}` : `${idx}`;
@@ -62,6 +96,9 @@ export default function EpubReader({ epub }: ReaderProps) {
     } catch {
       /* ignore cleanup errors */
     }
+
+    // clear current UI immediately so the previous book's images don't remain visible
+    setHtmlContent("<div />");
 
     try {
       const result = epub.getChapterByHref(href) || {};
