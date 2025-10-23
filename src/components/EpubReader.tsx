@@ -25,6 +25,9 @@ export default function EpubReader({ epub }: ReaderProps) {
 
   const [fontSize, setFontSize] = useState(18);
 
+  const chapterCleanupRef = useRef<(() => Promise<void>) | null>(null);
+  const loadCounterRef = useRef(0);
+
   // stable key for TOC items based on tree path
   const tocKey = (path: string, idx: number) =>
     path ? `${path}-${idx}` : `${idx}`;
@@ -48,6 +51,18 @@ export default function EpubReader({ epub }: ReaderProps) {
   // load content for a given href (may include fragment)
   async function loadContentForHref(href: string | null) {
     if (!href) return;
+    const myLoadId = ++loadCounterRef.current;
+
+    // call previous cleanup before starting new load to free resources early
+    try {
+      if (chapterCleanupRef.current) {
+        await chapterCleanupRef.current().catch(() => {});
+        chapterCleanupRef.current = null;
+      }
+    } catch {
+      /* ignore cleanup errors */
+    }
+
     try {
       const result = epub.getChapterByHref(href) || {};
       const chapter = result.chapter;
@@ -75,13 +90,21 @@ export default function EpubReader({ epub }: ReaderProps) {
         )}</em></div>`;
       }
 
-      const { html } = await prepareChapterHtml({
+      const { html, cleanup } = await prepareChapterHtml({
         epub,
         chapterHref: href,
         chapterHtml: content,
       });
 
+      if (myLoadId !== loadCounterRef.current) {
+        // stale: run cleanup and do not set the html
+        await cleanup().catch(() => {});
+        return;
+      }
+
+      // set content and register cleanup
       setHtmlContent(html);
+      chapterCleanupRef.current = cleanup;
 
       // scroll to fragment if present
       if (fragment) {
@@ -89,7 +112,8 @@ export default function EpubReader({ epub }: ReaderProps) {
       } else {
         if (contentRef.current) contentRef.current.scrollTop = 0;
       }
-    } finally {
+    } catch {
+      chapterCleanupRef.current = null;
     }
   }
 
@@ -204,6 +228,18 @@ export default function EpubReader({ epub }: ReaderProps) {
       </ul>
     );
   }
+
+  useEffect(() => {
+    return () => {
+      // increment loadCounter so any in-flight loads know they're stale
+      loadCounterRef.current++;
+      if (chapterCleanupRef.current) {
+        // call and don't await blocking unmount; fire-and-forget but handle errors
+        chapterCleanupRef.current().catch(() => {});
+        chapterCleanupRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="flex h-full">

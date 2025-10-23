@@ -38,8 +38,10 @@ export const useReaderStore = create<ReaderStore>((set) => ({
     } catch (error: any) {
       set({
         error: {
-          message: "Sorry, Couldn't open the book",
-          detail: error.message,
+          message: `Sorry, Couldn't open the book '${epubMetadata.title}'`,
+          detail:
+            error.message ||
+            `Its probably deleted or that you have since changed the path to somewhere else. \n Make sure the file exists inside 'Documents/${store.settings?.libraryFolderPath}' `,
         },
       });
     }
