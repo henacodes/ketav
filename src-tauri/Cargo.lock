@@ -3,6 +3,23 @@
 version = 4
 
 [[package]]
+name = "Ketav"
+version = "0.2.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-notification",
+ "tauri-plugin-opener",
+ "tauri-plugin-sql",
+ "tauri-plugin-store",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2063,23 +2080,6 @@ checksum = "5dea2b27dd239b2556ed7a25ba842fe47fd602e7fc7433c2a8d6106d4d9edd70"
 dependencies = [
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "ketav"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-notification",
- "tauri-plugin-opener",
- "tauri-plugin-sql",
- "tauri-plugin-store",
 ]
 
 [[package]]
