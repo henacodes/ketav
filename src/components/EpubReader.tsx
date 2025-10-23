@@ -3,7 +3,7 @@ import type { Epub, TocEntry } from "epubix";
 import { Button } from "./ui/button";
 import { Bookmark } from "lucide-react";
 import { useReadingTracker } from "@/hooks/useReadingTimer";
-import { generateBookId } from "@/lib/helpers/epub";
+import { generateBookId, prepareChapterHtml } from "@/lib/helpers/epub";
 
 interface ReaderProps {
   epub: Epub;
@@ -75,7 +75,13 @@ export default function EpubReader({ epub }: ReaderProps) {
         )}</em></div>`;
       }
 
-      setHtmlContent(content);
+      const { html } = await prepareChapterHtml({
+        epub,
+        chapterHref: href,
+        chapterHtml: content,
+      });
+
+      setHtmlContent(html);
 
       // scroll to fragment if present
       if (fragment) {
