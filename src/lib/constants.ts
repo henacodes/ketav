@@ -4,6 +4,7 @@ export const STORE_KEYS = {
   libraryFolderPath: "library-folder-path",
   fontFamily: "font-family",
   textAlignment: "text-alignment",
+  lastOpenedBook: "last-opened-book",
 };
 
 // default store values

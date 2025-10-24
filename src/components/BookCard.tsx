@@ -18,8 +18,8 @@ export default function BookCard({
   const setOpenBook = useReaderStore((state) => state.setOpenBook);
   const navigate = useNavigate();
 
-  function handleOpenBook(epubMetadata: LibraryEpub) {
-    setOpenBook(epubMetadata);
+  function handleOpenBook(fileName: string) {
+    setOpenBook(fileName);
     navigate("/");
   }
 
@@ -76,7 +76,7 @@ export default function BookCard({
                 */}
 
         <Button
-          onClick={() => handleOpenBook(book)}
+          onClick={() => handleOpenBook(book.fileName)}
           variant="outline"
           size="sm"
           className="w-full"

@@ -1,35 +1,72 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import EpubReader from "@/components/EpubReader";
 import { useReaderStore } from "@/stores/useReaderStore";
-import { Link } from "react-router";
 import { BookAlert, MoveRight, AlertTriangle } from "lucide-react";
+import { STORE_KEYS } from "@/lib/constants";
 
 export function HomePage() {
-  const { openBook, error } = useReaderStore();
+  const { openBook, error, setOpenBook } = useReaderStore();
 
+  const [lastOpenedBookFileName, setLastOpenedBookFilename] = useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    const stored =
+      typeof window !== "undefined"
+        ? localStorage.getItem(STORE_KEYS.lastOpenedBook)
+        : null;
+    setLastOpenedBookFilename(stored);
+  }, []);
+
+  useEffect(() => {
+    if (!openBook?.book && lastOpenedBookFileName) {
+      setOpenBook(lastOpenedBookFileName);
+    }
+    // only depend on the pieces we care about
+  }, [lastOpenedBookFileName, openBook?.book, setOpenBook]);
+
+  // If a book is already open, render the reader immediately
   if (openBook?.book) {
     return (
-      <div className=" h-[87vh]   ">
+      <div className="h-[87vh]">
         <EpubReader epub={openBook.book} />
       </div>
     );
   }
 
+  // Render empty state / error
+  const renderErrorBody = () => {
+    if (!error) return null;
+    const message = error instanceof Error ? error.message : String(error);
+    // some errors might include detail property
+    const detail =
+      error && typeof error === "object" && "detail" in (error as any)
+        ? (error as any).detail
+        : undefined;
+
+    return (
+      <>
+        <div className="flex justify-center mb-3 text-destructive">
+          <AlertTriangle size={80} />
+        </div>
+        <h2 className="text-xl font-semibold mb-2">Error</h2>
+        <p className="text-muted-foreground">{message}</p>
+        {detail && (
+          <p className="text-sm text-muted-foreground mt-1 mx-5">{detail}</p>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="bg-card h-[93vh] flex items-center justify-center">
       <div className="text-center">
         {error ? (
-          <>
-            <div className="flex justify-center mb-3 text-destructive">
-              <AlertTriangle size={80} />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Error</h2>
-            <p className="text-muted-foreground">{error.message}</p>
-            {error.detail && (
-              <p className="text-sm text-muted-foreground mt-1 mx-5  ">
-                {error.detail}
-              </p>
-            )}
-          </>
+          renderErrorBody()
         ) : (
           <>
             <div className="flex justify-center mb-3">

@@ -30,7 +30,7 @@ export default function EpubReader({ epub }: ReaderProps) {
     new Map()
   );
 
-  const { settings, fetchSettings } = useSettingsStore((store) => store);
+  const { settings } = useSettingsStore((store) => store);
   const toggleSettingsDialog = useReaderStore(
     (store) => store.toggleSettingsDialog
   );
@@ -464,11 +464,6 @@ export default function EpubReader({ epub }: ReaderProps) {
   }
 
   useEffect(() => {
-    async function init() {
-      await fetchSettings();
-    }
-
-    init();
     return () => {
       // increment loadCounter so any in-flight loads know they're stale
       loadCounterRef.current++;

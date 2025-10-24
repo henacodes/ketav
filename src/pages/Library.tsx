@@ -49,7 +49,6 @@ export function LibraryPage() {
   // Initial effect: only sync if DB is empty
   useEffect(() => {
     async function init() {
-      await fetchSettings();
       const books = await fetchBooksFromDb();
       if (books.length === 0) {
         await syncAndFetchBooks();

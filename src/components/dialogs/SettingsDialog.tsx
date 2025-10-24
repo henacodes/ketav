@@ -37,7 +37,7 @@ const FONT_FAMILY_OPTIONS: { value: FontFamilyOptions; label: string }[] = [
 ];
 
 export function SettingsDialog() {
-  const { settings, updateSetting, fetchSettings } = useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const { isSettingsDialogOpen, toggleSettingsDialog } = useReaderStore(
     (store) => store
   );
@@ -68,14 +68,6 @@ export function SettingsDialog() {
       });
     }
   };
-
-  useEffect(() => {
-    async function init() {
-      await fetchSettings();
-    }
-
-    init();
-  }, []);
 
   return (
     <Dialog open={isSettingsDialogOpen} onOpenChange={toggleSettingsDialog}>

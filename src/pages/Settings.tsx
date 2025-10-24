@@ -15,7 +15,7 @@ export function SettingsPage() {
   const [_, setSelectedDir] = useState<string | null>(null);
   const { setTheme } = useTheme();
 
-  const { settings, fetchSettings, updateSetting } = useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const [fullLibraryPath, setFullLibraryPath] = useState<string | null>(null);
   const [currentTheme, setCurrentTheme] = useState<Theme>("light");
 
@@ -66,9 +66,6 @@ export function SettingsPage() {
     // Optionally update local state if needed
     setSelectedDir(subfolder);
   }
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
 
   useEffect(() => {
     async function updateFullPath() {
