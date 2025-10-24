@@ -1,11 +1,15 @@
 import { DirEntry } from "@tauri-apps/plugin-fs";
-import { Epub, EpubMetadata, loadEpubMetadata } from "epubix";
+import { Epub, EpubMetadata, loadEpubMetadata, TocEntry } from "epubix";
 import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { getSettings } from "./settings";
 import type { LibraryEpub } from "../types/epub";
 
 export function filterEpubFiles(files: DirEntry[]) {
   return files.filter((file) => file.isFile && file.name.endsWith(".epub"));
+}
+
+export function escapeHtml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 export async function collectEpubs(files: DirEntry[]) {
@@ -74,8 +78,6 @@ export function trimBookTitle(title: string, maxLength = 50): string {
   // Append ellipsis to show it was shortened
   return trimmed + "…";
 }
-
-// Note: Ensure DOM lib is available in tsconfig (lib: ["dom", ...])
 
 type ResourceUsage = {
   normalizedPath: string;
@@ -619,4 +621,113 @@ export async function prepareChapterHtml(opts: {
     cleanup,
     missing: missingPaths,
   };
+}
+
+export function buildTocSpineRanges(epub: Epub) {
+  // flatten TOC entries into an array of hrefs in TOC order
+  const flatten = (entries: TocEntry[] | undefined, out: string[] = []) => {
+    if (!entries) return out;
+    for (const e of entries) {
+      if (e.href) out.push(e.href);
+      if (e.children && e.children.length) flatten(e.children, out);
+    }
+    return out;
+  };
+  const tocHrefs = flatten(epub.toc || []);
+
+  // build map from normalizedPath -> chapterIndex for the spine
+  const pathToIndex = new Map<string, number>();
+  (epub.chapters || []).forEach((ch, idx) => {
+    if (ch && ch.href) {
+      const resolved = epub.resolveHref(ch.href);
+      if (resolved && resolved.normalizedPath) {
+        pathToIndex.set(resolved.normalizedPath, idx);
+      } else {
+        // fallback: use the raw href if normalizedPath missing
+        pathToIndex.set(ch.href, idx);
+      }
+    }
+  });
+
+  // compute start indices for each toc href by resolving the href and finding the chapter index
+  const tocEntriesWithIndex: Array<{
+    href: string;
+    startIndex: number | null;
+  }> = tocHrefs.map((href) => {
+    try {
+      const r = epub.resolveHref(href);
+      const normalized = r && r.normalizedPath ? r.normalizedPath : href;
+      const idx = pathToIndex.has(normalized)
+        ? pathToIndex.get(normalized)!
+        : null;
+      return { href, startIndex: idx };
+    } catch {
+      return { href, startIndex: null };
+    }
+  });
+
+  // now create ranges: for entries with valid startIndex, end is next valid startIndex, else spine length
+  const ranges = new Map<string, { start: number; end: number }>();
+  const spineLength = (epub.chapters || []).length;
+  // build array of only valid starts preserving order
+  const validStarts = tocEntriesWithIndex
+    .map((e) => ({ href: e.href, startIndex: e.startIndex }))
+    .filter((e) => e.startIndex !== null) as Array<{
+    href: string;
+    startIndex: number;
+  }>;
+
+  for (let i = 0; i < validStarts.length; i++) {
+    const { href, startIndex } = validStarts[i];
+    // find next valid start index greater than this startIndex; if none, use spineLength
+    let end = spineLength;
+    for (let j = i + 1; j < validStarts.length; j++) {
+      const nextStart = validStarts[j].startIndex;
+      if (typeof nextStart === "number" && nextStart > startIndex) {
+        end = nextStart;
+        break;
+      }
+    }
+    ranges.set(href, { start: startIndex, end });
+  }
+
+  return ranges; // Map<href, {start,end}>
+}
+export async function loadSpineRangeContent(
+  epub: Epub,
+  start: number,
+  end: number
+) {
+  const chaptersHtml: string[] = [];
+  const chapterHrefs: string[] = [];
+  for (let i = start; i < end; i++) {
+    const ch = epub.chapters?.[i];
+    if (!ch) continue;
+    // prefer the already-parsed content if available on chapter.content
+    let content = ch.content;
+    if (!content) {
+      // try to resolve and fetch raw file
+      try {
+        const resolved = epub.resolveHref(ch.href || "");
+        if (resolved && resolved.normalizedPath) {
+          const buf = await epub.getFile(resolved.normalizedPath);
+          if (buf) content = new TextDecoder().decode(buf);
+        }
+      } catch {
+        // ignore, fallback below
+      }
+    }
+    if (!content)
+      content = `<div class="text-muted-foreground"><em>Unable to load chapter ${escapeHtml(
+        ch.href || `#${i}`
+      )}</em></div>`;
+    // wrap in container so fragments and later DOM queries are scoped
+    const wrapper = `<div data-chapter-index="${i}" data-chapter-href="${escapeHtml(
+      ch.href || ""
+    )}">${content}</div>`;
+    chaptersHtml.push(wrapper);
+    chapterHrefs.push(ch.href || "");
+  }
+  const combined = chaptersHtml.join("\n");
+  return { combinedHtml: combined, chapterHrefs };
 }

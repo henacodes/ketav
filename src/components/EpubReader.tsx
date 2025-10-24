@@ -3,7 +3,12 @@ import type { Epub, TocEntry } from "epubix";
 import { Button } from "./ui/button";
 import { TableOfContents } from "lucide-react";
 import { useReadingTracker } from "@/hooks/useReadingTimer";
-import { generateBookId, prepareChapterHtml } from "@/lib/helpers/epub";
+import {
+  buildTocSpineRanges,
+  escapeHtml,
+  generateBookId,
+  prepareChapterHtml,
+} from "@/lib/helpers/epub";
 import {
   Drawer,
   DrawerContent,
@@ -18,6 +23,10 @@ interface ReaderProps {
 export default function EpubReader({ epub }: ReaderProps) {
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
   const [htmlContent, setHtmlContent] = useState<string>("<div />");
+  const tocRangesRef = useRef<Map<string, { start: number; end: number }>>(
+    new Map()
+  );
+
   useReadingTracker({
     bookId: generateBookId({
       title: epub.metadata.title,
@@ -91,12 +100,16 @@ export default function EpubReader({ epub }: ReaderProps) {
     return findFirstHref(epub.toc) || null;
   }, [epub]);
 
+  useEffect(() => {
+    tocRangesRef.current = buildTocSpineRanges(epub);
+  }, [epub]);
+
   // load content for a given href (may include fragment)
   async function loadContentForHref(href: string | null) {
     if (!href) return;
     const myLoadId = ++loadCounterRef.current;
 
-    // call previous cleanup before starting new load to free resources early
+    // Free previous chapter resources early
     try {
       if (chapterCleanupRef.current) {
         await chapterCleanupRef.current().catch(() => {});
@@ -106,22 +119,145 @@ export default function EpubReader({ epub }: ReaderProps) {
       /* ignore cleanup errors */
     }
 
-    // clear current UI immediately so the previous book's images don't remain visible
+    // Clear UI immediately so previous book content (images) disappear
     setHtmlContent("<div />");
 
     try {
-      const result = epub.getChapterByHref(href) || {};
-      const chapter = result.chapter;
-      const fragment =
-        result.fragment ||
-        (href.includes("#") ? href.split("#")[1] : undefined);
+      // Resolve fragment (if any) from the passed href
+      const fragment = ((): string | undefined => {
+        try {
+          const r = epub.resolveHref(href);
+          return (
+            r?.fragment ?? (href.includes("#") ? href.split("#")[1] : undefined)
+          );
+        } catch {
+          return href.includes("#") ? href.split("#")[1] : undefined;
+        }
+      })();
 
+      // Determine if this href corresponds to a TOC entry that maps to a spine range
+      // (tocRangesRef is expected to be built elsewhere when the epub is loaded)
+      let range: { start: number; end: number } | undefined;
+      try {
+        const ranges = tocRangesRef.current; // Map<string, {start,end}>
+        // 1) direct key match
+        if (ranges.has(href)) {
+          range = ranges.get(href);
+        } else {
+          // 2) try to match by normalized path: resolve the clicked href and compare to resolved toc hrefs
+          const resolvedClick = epub.resolveHref(href);
+          const clickNorm = resolvedClick?.normalizedPath ?? href;
+          for (const [tocHref, r] of ranges.entries()) {
+            try {
+              const resolvedToc = epub.resolveHref(tocHref);
+              const tocNorm = resolvedToc?.normalizedPath ?? tocHref;
+              if (tocNorm === clickNorm) {
+                range = r;
+                break;
+              }
+            } catch {
+              // ignore and continue
+            }
+          }
+        }
+      } catch {
+        // if anything fails while looking up ranges, treat as no-range (fallback to single chapter)
+        range = undefined;
+      }
+
+      // Helper: prepare & set content from a single html string (calls prepareChapterHtml)
+      const prepareAndSet = async (
+        primaryHrefForBase: string,
+        htmlString: string
+      ) => {
+        const { html, cleanup } = await prepareChapterHtml({
+          epub,
+          chapterHref: primaryHrefForBase,
+          chapterHtml: htmlString,
+        });
+
+        // check for staleness
+        if (myLoadId !== loadCounterRef.current) {
+          await cleanup().catch(() => {});
+          return false;
+        }
+
+        setHtmlContent(html);
+        chapterCleanupRef.current = cleanup;
+        return true;
+      };
+
+      // If we have a valid range and it actually covers at least one spine item, concat multiple spine items
+      if (
+        range &&
+        typeof range.start === "number" &&
+        typeof range.end === "number" &&
+        range.end > range.start
+      ) {
+        // Defensive limit: avoid concatenating absurd numbers of chapters (protect memory)
+        const MAX_CHAPTERS_TO_CONCAT = 50;
+        const count = Math.min(range.end - range.start, MAX_CHAPTERS_TO_CONCAT);
+        const endIndex = range.start + count;
+
+        // Load & concatenate chapters in the range
+        const chaptersHtml: string[] = [];
+        const chapterHrefs: string[] = [];
+        for (let i = range.start; i < endIndex; i++) {
+          const ch = epub.chapters?.[i];
+          if (!ch) continue;
+          let content = ch.content;
+          if (!content) {
+            try {
+              const resolved = epub.resolveHref(ch.href || "");
+              if (resolved?.normalizedPath) {
+                const buf = await epub.getFile(resolved.normalizedPath);
+                if (buf) content = new TextDecoder().decode(buf);
+              }
+            } catch {
+              // ignore and fallback
+            }
+          }
+          if (!content) {
+            content = `<div class="text-muted-foreground"><em>Unable to load chapter ${escapeHtml(
+              ch.href || `#${i}`
+            )}</em></div>`;
+          }
+          // wrap so we can distinguish chapter boundaries and scope later if needed
+          chaptersHtml.push(
+            `<div data-chapter-index="${i}" data-chapter-href="${escapeHtml(
+              ch.href ?? ""
+            )}">${content}</div>`
+          );
+          chapterHrefs.push(ch.href ?? "");
+        }
+
+        const combinedHtml = chaptersHtml.join("\n");
+        const primaryHref = chapterHrefs[0] || href;
+
+        // prepare (resolve resources, inject base, create blobs or use SW, etc.)
+        const ok = await prepareAndSet(primaryHref, combinedHtml);
+        if (!ok) return; // stale, cleanup already handled inside helper
+
+        // after setting, scroll to fragment if needed
+        if (fragment) {
+          setTimeout(() => scrollToFragment(fragment), 50);
+        } else {
+          if (contentRef.current) contentRef.current.scrollTop = 0;
+        }
+
+        return;
+      }
+
+      // Fallback path: load a single chapter (existing behavior)
+      // Try epub.getChapterByHref first (may already have parsed chapter.content)
+      const chapterResult = epub.getChapterByHref(href) || {};
+      const chapter = chapterResult.chapter;
       let content: string | undefined = chapter?.content;
 
       if (!content) {
         try {
           const resolved = epub.resolveHref(href);
-          if (resolved && resolved.normalizedPath) {
+          if (resolved?.normalizedPath) {
             const fileBuffer = await epub.getFile(resolved.normalizedPath);
             if (fileBuffer) content = new TextDecoder().decode(fileBuffer);
           }
@@ -136,21 +272,8 @@ export default function EpubReader({ epub }: ReaderProps) {
         )}</em></div>`;
       }
 
-      const { html, cleanup } = await prepareChapterHtml({
-        epub,
-        chapterHref: href,
-        chapterHtml: content,
-      });
-
-      if (myLoadId !== loadCounterRef.current) {
-        // stale: run cleanup and do not set the html
-        await cleanup().catch(() => {});
-        return;
-      }
-
-      // set content and register cleanup
-      setHtmlContent(html);
-      chapterCleanupRef.current = cleanup;
+      const ok = await prepareAndSet(href, content);
+      if (!ok) return; // stale and cleaned up
 
       // scroll to fragment if present
       if (fragment) {
@@ -158,15 +281,14 @@ export default function EpubReader({ epub }: ReaderProps) {
       } else {
         if (contentRef.current) contentRef.current.scrollTop = 0;
       }
-    } catch {
+    } catch (err) {
+      // Ensure we clear the cleanup ref on error so next load starts fresh
       chapterCleanupRef.current = null;
+      console.error("loadContentForHref failed:", err);
+      // Optionally show fallback UI: keep the "Unable to load" message already set above
     }
   }
 
-  // Intercept clicks inside the rendered EPUB content so links (including the TOC page)
-  // that point to relative EPUB resources/chapter hrefs are handled by the app.
-  // This prevents the browser from attempting to navigate relative to the page origin
-  // (which would break resources) and lets us resolve hrefs via epub.resolveHref/getChapterByHref.
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
@@ -223,11 +345,6 @@ export default function EpubReader({ epub }: ReaderProps) {
       container.removeEventListener("click", handleClick);
     };
   }, [contentRef, epub, drawerOpen]);
-
-  // escape fallback HTML
-  function escapeHtml(s: string) {
-    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
 
   // scroll to element inside rendered XHTML
   function scrollToFragment(fragmentId: string) {

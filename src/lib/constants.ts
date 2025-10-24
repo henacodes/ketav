@@ -1,5 +1,7 @@
 export const STORE_KEYS = {
   libraryFolderPath: "library-folder-path",
+  fontFamily: "font-family",
+  textAlignment: "text-alignment",
 };
 
 // a subfolder inside the users /Documents folder
