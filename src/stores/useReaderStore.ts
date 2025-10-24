@@ -8,8 +8,10 @@ import { DEFAULT_LIBRARY_FOLDER_PATH } from "@/lib/constants";
 interface ReaderStore {
   openBook: OpenEpub | null;
   openChapterHref: string | null;
+  isSettingsDialogOpen: boolean;
   setOpenBook: (epubMetadata: LibraryEpub) => Promise<void>;
   setOpenChapterHref: (href: string) => void;
+  toggleSettingsDialog: (state: boolean) => void;
   loading: boolean;
   error: { message: string; detail?: string } | null;
 }
@@ -19,6 +21,7 @@ export const useReaderStore = create<ReaderStore>((set) => ({
   error: null,
   openBook: null,
   openChapterHref: null,
+  isSettingsDialogOpen: false,
   setOpenBook: async (epubMetadata) => {
     const store = useSettingsStore.getState();
     let currentLibraryPath =
@@ -48,5 +51,8 @@ export const useReaderStore = create<ReaderStore>((set) => ({
   },
   setOpenChapterHref: (href) => {
     set({ openChapterHref: href });
+  },
+  toggleSettingsDialog: (state) => {
+    set({ isSettingsDialogOpen: state });
   },
 }));

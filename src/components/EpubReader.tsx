@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Epub, TocEntry } from "epubix";
 import { Button } from "./ui/button";
-import { TableOfContents } from "lucide-react";
+import { Settings, TableOfContents } from "lucide-react";
 import { useReadingTracker } from "@/hooks/useReadingTimer";
 import {
   buildTocSpineRanges,
@@ -15,6 +15,9 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import useSettingsStore from "@/stores/useSettingsStore";
+import { useReaderStore } from "@/stores/useReaderStore";
+import { SettingsDialog } from "./dialogs/SettingsDialog";
 
 interface ReaderProps {
   epub: Epub;
@@ -25,6 +28,11 @@ export default function EpubReader({ epub }: ReaderProps) {
   const [htmlContent, setHtmlContent] = useState<string>("<div />");
   const tocRangesRef = useRef<Map<string, { start: number; end: number }>>(
     new Map()
+  );
+
+  const { settings, fetchSettings } = useSettingsStore((store) => store);
+  const toggleSettingsDialog = useReaderStore(
+    (store) => store.toggleSettingsDialog
   );
 
   useReadingTracker({
@@ -46,40 +54,6 @@ export default function EpubReader({ epub }: ReaderProps) {
   // drawer state for small screens
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // When the epub instance changes (opening a different book), immediately:
-  //  - mark any in-flight loads stale
-  //  - run the previous chapter cleanup (revoke blobs / decrement refs)
-  //  - clear the displayed HTML so old images don't remain visible
-  //  - clear selectedHref so firstTocHref effect can set the new initial href
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      // make any in-flight loads stale
-      loadCounterRef.current++;
-
-      // cleanup previous chapter resources (if any)
-      if (chapterCleanupRef.current) {
-        try {
-          await chapterCleanupRef.current();
-        } catch {
-          // ignore cleanup errors
-        }
-        chapterCleanupRef.current = null;
-      }
-
-      // clear UI immediately so previous book content (images) disappear
-      if (mounted) {
-        setHtmlContent("<div />");
-        setSelectedHref(null);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [epub]);
-
   // stable key for TOC items based on tree path
   const tocKey = (path: string, idx: number) =>
     path ? `${path}-${idx}` : `${idx}`;
@@ -99,10 +73,41 @@ export default function EpubReader({ epub }: ReaderProps) {
     };
     return findFirstHref(epub.toc) || null;
   }, [epub]);
+  function scrollToFragment(fragmentId: string) {
+    if (!contentRef.current) return;
+    const doc = contentRef.current;
+    try {
+      const target = doc.querySelector(
+        `#${CSS.escape(fragmentId)}`
+      ) as HTMLElement | null;
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+    } catch {
+      // CSS.escape may throw if not supported; fall back to naive selector
+      const t = doc.querySelector(`#${fragmentId}`) as HTMLElement | null;
+      if (t) {
+        t.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+    }
+    const alt = doc.querySelector(
+      `[name="${fragmentId}"]`
+    ) as HTMLElement | null;
+    if (alt) alt.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
-  useEffect(() => {
-    tocRangesRef.current = buildTocSpineRanges(epub);
-  }, [epub]);
+  function toggleExpand(key: string) {
+    setExpandedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function onSelectHref(href?: string) {
+    if (!href) return;
+    setSelectedHref(href);
+    // if the drawer is open (small screen), close it after selecting
+    if (drawerOpen) setDrawerOpen(false);
+  }
 
   // load content for a given href (may include fragment)
   async function loadContentForHref(href: string | null) {
@@ -290,6 +295,44 @@ export default function EpubReader({ epub }: ReaderProps) {
   }
 
   useEffect(() => {
+    tocRangesRef.current = buildTocSpineRanges(epub);
+  }, [epub]);
+
+  // When the epub instance changes (opening a different book), immediately:
+  //  - mark any in-flight loads stale
+  //  - run the previous chapter cleanup (revoke blobs / decrement refs)
+  //  - clear the displayed HTML so old images don't remain visible
+  //  - clear selectedHref so firstTocHref effect can set the new initial href
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      // make any in-flight loads stale
+      loadCounterRef.current++;
+
+      // cleanup previous chapter resources (if any)
+      if (chapterCleanupRef.current) {
+        try {
+          await chapterCleanupRef.current();
+        } catch {
+          // ignore cleanup errors
+        }
+        chapterCleanupRef.current = null;
+      }
+
+      // clear UI immediately so previous book content (images) disappear
+      if (mounted) {
+        setHtmlContent("<div />");
+        setSelectedHref(null);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [epub]);
+
+  useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
 
@@ -347,41 +390,6 @@ export default function EpubReader({ epub }: ReaderProps) {
   }, [contentRef, epub, drawerOpen]);
 
   // scroll to element inside rendered XHTML
-  function scrollToFragment(fragmentId: string) {
-    if (!contentRef.current) return;
-    const doc = contentRef.current;
-    try {
-      const target = doc.querySelector(
-        `#${CSS.escape(fragmentId)}`
-      ) as HTMLElement | null;
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-    } catch {
-      // CSS.escape may throw if not supported; fall back to naive selector
-      const t = doc.querySelector(`#${fragmentId}`) as HTMLElement | null;
-      if (t) {
-        t.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-    }
-    const alt = doc.querySelector(
-      `[name="${fragmentId}"]`
-    ) as HTMLElement | null;
-    if (alt) alt.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function toggleExpand(key: string) {
-    setExpandedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
-  }
-
-  function onSelectHref(href?: string) {
-    if (!href) return;
-    setSelectedHref(href);
-    // if the drawer is open (small screen), close it after selecting
-    if (drawerOpen) setDrawerOpen(false);
-  }
 
   useEffect(() => {
     if (!selectedHref && firstTocHref) setSelectedHref(firstTocHref);
@@ -456,6 +464,11 @@ export default function EpubReader({ epub }: ReaderProps) {
   }
 
   useEffect(() => {
+    async function init() {
+      await fetchSettings();
+    }
+
+    init();
     return () => {
       // increment loadCounter so any in-flight loads know they're stale
       loadCounterRef.current++;
@@ -469,6 +482,7 @@ export default function EpubReader({ epub }: ReaderProps) {
 
   return (
     <div className="flex h-full">
+      <SettingsDialog />
       {/* Sidebar TOC (left) - hidden on small screens */}
       <aside className="w-72 border-r border-border bg-card overflow-auto hidden md:block">
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4">
@@ -549,14 +563,17 @@ export default function EpubReader({ epub }: ReaderProps) {
             </div>
           </div>
 
-          {/*    <Button
+          <Button
             variant="ghost"
             size="sm"
+            onClick={() => {
+              toggleSettingsDialog(true);
+            }}
             className="text-primary hover:text-primary/80"
           >
-            <Bookmark className="w-4 h-4 mr-2" />
-            Bookmark
-          </Button> */}
+            <Settings className="w-4 h-4 mr-2" />
+            Settings
+          </Button>
         </header>
 
         <div className="flex-1 p-6 bg-card  ">
@@ -565,7 +582,13 @@ export default function EpubReader({ epub }: ReaderProps) {
             className="max-w-7xl mx-auto overflow-auto max-h-[81.4vh] font-serif leading-relaxed space-y-6 epub-reader-container"
             style={{ fontSize: `${fontSize}px` }}
           >
-            <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            <div
+              dangerouslySetInnerHTML={{ __html: htmlContent }}
+              style={{
+                textAlign: settings?.textAlignment,
+                fontFamily: settings?.fontFamily,
+              }}
+            />
           </div>
         </div>
       </div>

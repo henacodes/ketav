@@ -2,37 +2,53 @@ import { getSettings } from "@/lib/helpers/settings";
 import { Settings } from "@/lib/types/settings";
 import { create } from "zustand";
 import { load } from "@tauri-apps/plugin-store";
-import { STORE_KEYS } from "@/lib/constants";
+import {
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_LIBRARY_FOLDER_PATH,
+  DEFAULT_TEXT_ALIGNMENT,
+  STORE_KEYS,
+} from "@/lib/constants";
 
 interface SettingsStore {
   settings: Settings | null;
   fetchSettings: () => Promise<void>;
-  updateLibraryFolderPath: (path: string) => Promise<void>;
+  updateSetting: <K extends keyof Settings>(
+    key: K,
+    value: Settings[K]
+  ) => Promise<void>;
 }
 
-const useSettingsStore = create<SettingsStore>((set, get) => ({
-  settings: {
-    libraryFolderPath: "",
-  },
+const defaultSettings = {
+  libraryFolderPath: DEFAULT_LIBRARY_FOLDER_PATH,
+  textAlignment: DEFAULT_TEXT_ALIGNMENT,
+  fontFamily: DEFAULT_FONT_FAMILY,
+};
 
-  fetchSettings: async function () {
+const useSettingsStore = create<SettingsStore>((set, get) => ({
+  settings: defaultSettings,
+  fetchSettings: async () => {
     const settings = await getSettings();
+    console.log("FETCHED SETTINGS", settings);
     set({ settings });
   },
 
-  updateLibraryFolderPath: async (path: string) => {
-    const store = await load("settings.json");
-    await store.set(STORE_KEYS.libraryFolderPath, { value: path });
-    await store.save();
+  updateSetting: async (key, value) => {
+    try {
+      const store = await load("settings.json");
+      await store.set(STORE_KEYS[key], { value });
+      await store.save();
 
-    // Update local Zustand state too
-    const current = get().settings;
-    set({
-      settings: {
-        ...current,
-        libraryFolderPath: path,
-      },
-    });
+      const current = get().settings ?? defaultSettings;
+
+      set({
+        settings: {
+          ...current,
+          [key]: value,
+        },
+      });
+    } catch (err) {
+      console.error(`Failed to update setting "${String(key)}":`, err);
+    }
   },
 }));
 
