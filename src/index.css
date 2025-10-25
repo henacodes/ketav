@@ -239,3 +239,7 @@
 .epub-reader-container p {
   margin: 2rem 0 1rem 0;
 }
+
+.pdf-dark {
+  filter: invert(1) hue-rotate(180deg);
+}

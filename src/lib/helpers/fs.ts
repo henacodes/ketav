@@ -34,6 +34,12 @@ import {
   getPdfCoverImageFromArrayBuffer,
 } from "./pdf";
 
+export function getFileExtension(fileName: string): string | null {
+  const parts = fileName.split(".");
+  if (parts.length <= 1) return null; // no extension
+  return parts.pop() || null; // return last part
+}
+
 export async function syncBooksInFileSystemWithDb({
   settings,
 }: {
