@@ -37,8 +37,7 @@ Each phase represents a milestone toward a stable, production-ready release.
 - [x] multiple font family choices
 - [x] Alignment based on preference
 - [x] Remember last opened Book with its active chapter
-- [ ] Next and Prev button
-- [ ] Show how much is the daily goal progress of the book while reading if there is a goal associated with the book
+- [x] Next and Prev button
 
 ## v0.4.x - Support for PDF
 
@@ -58,7 +57,7 @@ Each phase represents a milestone toward a stable, production-ready release.
 - [ ] Have a personal vocabulary table with meanings for each word
 - [ ] View all annotations on a sidebar
 
-## v0.5.x - Donwload Books
+## v0.5.x - Download Books from Libgen
 
 > Goal: implement book search/download feature
 
