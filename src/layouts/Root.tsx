@@ -2,6 +2,7 @@ import BookSummaryDialog from "@/components/dialogs/BookSummaryDialog";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useHistoryStore } from "@/stores/useHistoryStore";
 import useSettingsStore from "@/stores/useSettingsStore";
 import {
   BookOpen,
@@ -27,10 +28,14 @@ export default function RootLayout() {
   ];
 
   const fetchSettings = useSettingsStore((store) => store.fetchSettings);
+  const loadHistory = useHistoryStore((s) => s.loadHistory);
+
+  useEffect(() => {}, []);
 
   useEffect(() => {
     async function init() {
       await fetchSettings();
+      await loadHistory();
     }
 
     init();

@@ -4,10 +4,11 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { PdfHeader } from "./PdfReaderHeader";
 import { Theme } from "./theme-provider";
-import { STORE_KEYS, THEME_STORAGE_KEY } from "@/lib/constants";
+import { THEME_STORAGE_KEY } from "@/lib/constants";
 import { useReadingTracker } from "@/hooks/useReadingTimer";
 import { generateBookId } from "@/lib/helpers/epub";
 import { OpenPdf } from "@/lib/types/pdf";
+import { useHistoryStore } from "@/stores/useHistoryStore";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -35,10 +36,11 @@ export default function PdfReader({
     null
   );
   const [currentTheme, setCurrentTheme] = useState<Theme>("light");
-
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
-  const [zoom, setZoom] = useState<number>(1); // 1 = 100%
+  const [zoom, setZoom] = useState<number>(1);
+
+  const { addLastOpenedPage, findLastOpenedPage } = useHistoryStore();
 
   useReadingTracker({
     bookId: generateBookId(
@@ -50,15 +52,15 @@ export default function PdfReader({
       )
     ),
   });
-  // Convert File / Uint8Array to ArrayBuffer
+
+  // Load file data
   useEffect(() => {
     if (data instanceof File) {
       const reader = new FileReader();
       reader.onload = () => setFileData(reader.result as ArrayBuffer);
       reader.readAsArrayBuffer(data);
     } else if (data instanceof Uint8Array) {
-      const arrayBuffer = new Uint8Array(data).buffer;
-      setFileData(arrayBuffer);
+      setFileData(new Uint8Array(data).buffer);
     } else {
       setFileData(data as string | ArrayBuffer);
     }
@@ -81,35 +83,19 @@ export default function PdfReader({
     setCurrentTheme(theme === "dark" ? "dark" : "light");
   }, []);
 
+  // Load last opened page from store
   useEffect(() => {
     if (!fileName) return;
-    const savedPages = localStorage.getItem(STORE_KEYS.lastOpenedPage);
-    if (savedPages) {
-      try {
-        const pagesObj: Record<string, number> = JSON.parse(savedPages);
-        if (pagesObj[fileName]) {
-          setCurrentPage(pagesObj[fileName]);
-        }
-      } catch (e) {
-        console.error("Failed to parse last opened page from localStorage", e);
-      }
-    }
+    (async () => {
+      const savedPage = findLastOpenedPage(fileName);
+      if (savedPage) setCurrentPage(savedPage);
+    })();
   }, [fileName]);
 
-  // Save current page whenever it changes
+  // Save current page to store whenever it changes
   useEffect(() => {
     if (!fileName) return;
-    const savedPages = localStorage.getItem(STORE_KEYS.lastOpenedPage);
-    let pagesObj: Record<string, number> = {};
-    if (savedPages) {
-      try {
-        pagesObj = JSON.parse(savedPages);
-      } catch (e) {
-        console.error("Failed to parse last opened page from localStorage", e);
-      }
-    }
-    pagesObj[fileName] = currentPage;
-    localStorage.setItem(STORE_KEYS.lastOpenedPage, JSON.stringify(pagesObj));
+    addLastOpenedPage({ fileName, pageNum: currentPage });
   }, [currentPage, fileName]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
@@ -152,13 +138,10 @@ export default function PdfReader({
               style={{
                 display: "flex",
                 justifyContent: "center",
-                marginBottom: 16, // optional spacing between pages
+                marginBottom: 16,
               }}
             >
-              <Page
-                pageNumber={startPage + i}
-                width={containerWidth * zoom} // scaled by zoom
-              />
+              <Page pageNumber={startPage + i} width={containerWidth * zoom} />
             </div>
           ))}
         </Document>

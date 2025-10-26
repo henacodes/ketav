@@ -7,7 +7,7 @@ import { Book } from "@/db/schema";
 import { trimBookTitle } from "@/lib/helpers/epub";
 import { getFileExtension } from "@/lib/helpers/fs";
 import { Badge } from "./ui/badge";
-import { STORE_KEYS } from "@/lib/constants";
+import { useHistoryStore } from "@/stores/useHistoryStore";
 
 export default function BookCard({
   book,
@@ -21,9 +21,12 @@ export default function BookCard({
   const closeBook = useReaderStore((state) => state.closeBook);
   const navigate = useNavigate();
 
-  function handleOpenBook(fileName: string) {
+  async function handleOpenBook(fileName: string) {
     closeBook();
-    localStorage.setItem(STORE_KEYS.lastOpenedBook, fileName);
+    const setLastOpenedBook = useHistoryStore.getState().setLastOpenedBook;
+    await setLastOpenedBook(fileName);
+    navigate("/");
+
     navigate("/");
   }
 
