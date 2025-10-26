@@ -43,7 +43,10 @@ export default function BookCard({
               src={`/${getFileExtension(book.fileName)}.svg`}
               className="w-3"
             />
-            <small>{getFileExtension(book.fileName)}</small>
+            <small>
+              {getFileExtension(book.fileName)}{" "}
+              {book.pages && `| ${book.pages} pages`}
+            </small>
           </Badge>
         </div>
 

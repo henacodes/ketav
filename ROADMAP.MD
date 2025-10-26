@@ -43,9 +43,9 @@ Each phase represents a milestone toward a stable, production-ready release.
 
 > Goal: Add support for PDF
 
-- [ ] A separate reader component for PDF
-- [ ] Expand the Book Goal and Stat tables to include fields like page_number to accomodate pdf books
-- [ ] Add UI indicators to differentiate PDF from EPUB
+- [x] A separate reader component for PDF
+- [x] Expand the Book Goal and Stat tables to include fields like page_number to accomodate pdf books
+- [x] Add UI indicators to differentiate PDF from EPUB
 
 ## v0.5.x - Annotation, Highlighting and Related Features
 

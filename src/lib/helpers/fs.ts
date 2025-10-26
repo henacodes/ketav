@@ -129,6 +129,7 @@ export async function syncBooksInFileSystemWithDb({
         await registerBook({
           title: metadata.title ?? e.name,
           author: metadata.author ?? "",
+          pages: metadata.pages,
           bookId,
           coverImagePath: imgPath,
           fileName: e.name,

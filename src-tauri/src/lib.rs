@@ -33,6 +33,12 @@ pub fn run() {
             sql: include_str!("../migrations/0003_conscious_boomerang.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "add_page_number_field_to_books",
+            sql: include_str!("../migrations/0004_numerous_vermin.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::Builder::new().build())
