@@ -5,6 +5,9 @@ import "react-pdf/dist/Page/TextLayer.css";
 import { PdfHeader } from "./PdfReaderHeader";
 import { Theme } from "./theme-provider";
 import { THEME_STORAGE_KEY } from "@/lib/constants";
+import { useReadingTracker } from "@/hooks/useReadingTimer";
+import { generateBookId } from "@/lib/helpers/epub";
+import { OpenPdf } from "@/lib/types/pdf";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -16,10 +19,12 @@ type PdfReaderProps = {
   initialPage?: number;
   pageWindow?: number;
   fileName?: string;
+  openBook: OpenPdf;
 };
 
 export default function PdfReader({
   data,
+  openBook,
   initialPage = 1,
   pageWindow = 1,
   fileName = "document.pdf",
@@ -35,6 +40,16 @@ export default function PdfReader({
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [zoom, setZoom] = useState<number>(1); // 1 = 100%
 
+  useReadingTracker({
+    bookId: generateBookId(
+      Object.fromEntries(
+        Object.entries(openBook.metadata).map(([key, value]) => [
+          key,
+          value ?? undefined,
+        ])
+      )
+    ),
+  });
   // Convert File / Uint8Array to ArrayBuffer
   useEffect(() => {
     if (data instanceof File) {
@@ -70,8 +85,8 @@ export default function PdfReader({
     setNumPages(numPages);
   }
 
-  const startPage = Math.max(currentPage - pageWindow, 1);
-  const endPage = Math.min(currentPage + pageWindow, numPages);
+  const startPage = currentPage;
+  const endPage = currentPage;
 
   return (
     <div

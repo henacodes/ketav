@@ -19,6 +19,7 @@ interface ReaderStore {
   setOpenBook: (fileName: string) => Promise<void>;
   setOpenChapterHref: (href: string) => void;
   toggleSettingsDialog: (state: boolean) => void;
+  closeBook: () => void;
   loading: boolean;
   error: { message: string; detail?: string } | null;
 }
@@ -29,6 +30,9 @@ export const useReaderStore = create<ReaderStore>((set) => ({
   openBook: null,
   openChapterHref: null,
   isSettingsDialogOpen: false,
+  closeBook: () => {
+    set({ openBook: null, openChapterHref: null });
+  },
   setOpenBook: async (fileName: string) => {
     const store = useSettingsStore.getState();
     let currentLibraryPath =

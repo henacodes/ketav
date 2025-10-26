@@ -8,6 +8,7 @@ import { useReaderStore } from "@/stores/useReaderStore";
 import { BookAlert, MoveRight, AlertTriangle } from "lucide-react";
 import { STORE_KEYS } from "@/lib/constants";
 import { getFileExtension } from "@/lib/helpers/fs";
+import { OpenPdf } from "@/lib/types/pdf";
 
 export function HomePage() {
   const { openBook, error, setOpenBook } = useReaderStore();
@@ -53,6 +54,7 @@ export function HomePage() {
       <div className="h-[87vh]">
         <PdfReader
           data={(openBook as any).fileBytes}
+          openBook={openBook as OpenPdf}
           // pass optional pages if available in metadata
           //  pages={(openBook?.metadata as any)?.pages}
           fileName={(openBook?.metadata as any)?.fileName}

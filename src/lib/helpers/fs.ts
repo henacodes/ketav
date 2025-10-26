@@ -105,15 +105,6 @@ export async function syncBooksInFileSystemWithDb({
           scale: 1.5,
         });
 
-        // generate a stable bookId (you may want to use pdf metadata or filename)
-        const bookIdSeed = {
-          title: metadata.title ?? e.name,
-          author: metadata.author ?? "",
-          cover: coverBase64 ?? "",
-        };
-        // Reuse the same generateBookId function so IDs are consistent with your existing scheme
-        const bookId = generateEpubBookId(bookIdSeed as any);
-
         // save cover image to app storage
         let imgPath = "";
         if (coverBase64) {
@@ -123,6 +114,17 @@ export async function syncBooksInFileSystemWithDb({
             console.log("Failed to save PDF cover image", error);
           }
         }
+        // generate a stable bookId (you may want to use pdf metadata or filename)
+
+        // Reuse the same generateBookId function so IDs are consistent with your existing scheme
+        const bookId = generateEpubBookId(
+          Object.fromEntries(
+            Object.entries(metadata).map(([key, value]) => [
+              key,
+              value ?? undefined,
+            ])
+          )
+        );
 
         await registerBook({
           title: metadata.title ?? e.name,

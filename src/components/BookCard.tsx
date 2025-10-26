@@ -7,6 +7,7 @@ import { Book } from "@/db/schema";
 import { trimBookTitle } from "@/lib/helpers/epub";
 import { getFileExtension } from "@/lib/helpers/fs";
 import { Badge } from "./ui/badge";
+import { STORE_KEYS } from "@/lib/constants";
 
 export default function BookCard({
   book,
@@ -17,11 +18,12 @@ export default function BookCard({
   index: number;
   imgSrc?: string;
 }) {
-  const setOpenBook = useReaderStore((state) => state.setOpenBook);
+  const closeBook = useReaderStore((state) => state.closeBook);
   const navigate = useNavigate();
 
   function handleOpenBook(fileName: string) {
-    setOpenBook(fileName);
+    closeBook();
+    localStorage.setItem(STORE_KEYS.lastOpenedBook, fileName);
     navigate("/");
   }
 
