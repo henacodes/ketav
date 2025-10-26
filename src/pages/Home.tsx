@@ -57,7 +57,7 @@ export function HomePage() {
           openBook={openBook as OpenPdf}
           // pass optional pages if available in metadata
           //  pages={(openBook?.metadata as any)?.pages}
-          fileName={(openBook?.metadata as any)?.fileName}
+          fileName={openBook?.metadata.fileName}
         />
       </div>
     );

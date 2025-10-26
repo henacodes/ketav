@@ -57,8 +57,15 @@ Each phase represents a milestone toward a stable, production-ready release.
 - [ ] Have a personal vocabulary table with meanings for each word
 - [ ] View all annotations on a sidebar
 
-## v0.5.x - Download Books from Libgen
+## v0.6.x - Download Books from Libgen
 
 > Goal: implement book search/download feature
 
 - [ ] Search and Download books from lib-gen
+
+## v0.7.x - Book Curation
+
+> Goal implement ways in whih users can curate their books
+
+- [ ] implement in-app collection of books
+- [ ] add a special collection names reading-list

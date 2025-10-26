@@ -4,7 +4,7 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { PdfHeader } from "./PdfReaderHeader";
 import { Theme } from "./theme-provider";
-import { THEME_STORAGE_KEY } from "@/lib/constants";
+import { STORE_KEYS, THEME_STORAGE_KEY } from "@/lib/constants";
 import { useReadingTracker } from "@/hooks/useReadingTimer";
 import { generateBookId } from "@/lib/helpers/epub";
 import { OpenPdf } from "@/lib/types/pdf";
@@ -81,6 +81,37 @@ export default function PdfReader({
     setCurrentTheme(theme === "dark" ? "dark" : "light");
   }, []);
 
+  useEffect(() => {
+    if (!fileName) return;
+    const savedPages = localStorage.getItem(STORE_KEYS.lastOpenedPage);
+    if (savedPages) {
+      try {
+        const pagesObj: Record<string, number> = JSON.parse(savedPages);
+        if (pagesObj[fileName]) {
+          setCurrentPage(pagesObj[fileName]);
+        }
+      } catch (e) {
+        console.error("Failed to parse last opened page from localStorage", e);
+      }
+    }
+  }, [fileName]);
+
+  // Save current page whenever it changes
+  useEffect(() => {
+    if (!fileName) return;
+    const savedPages = localStorage.getItem(STORE_KEYS.lastOpenedPage);
+    let pagesObj: Record<string, number> = {};
+    if (savedPages) {
+      try {
+        pagesObj = JSON.parse(savedPages);
+      } catch (e) {
+        console.error("Failed to parse last opened page from localStorage", e);
+      }
+    }
+    pagesObj[fileName] = currentPage;
+    localStorage.setItem(STORE_KEYS.lastOpenedPage, JSON.stringify(pagesObj));
+  }, [currentPage, fileName]);
+
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
   }
@@ -99,6 +130,7 @@ export default function PdfReader({
       }}
     >
       <PdfHeader
+        onGoToPage={(pageNum) => setCurrentPage(pageNum)}
         currentPage={currentPage}
         numPages={numPages}
         zoom={zoom}
