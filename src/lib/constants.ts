@@ -5,6 +5,7 @@ export const STORE_KEYS = {
   fontFamily: "font-family",
   textAlignment: "text-alignment",
   lastOpenedBook: "last-opened-book",
+  lastOpenedPage: "last-opened-page",
 };
 
 // default store values

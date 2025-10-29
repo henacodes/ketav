@@ -5,6 +5,9 @@ import { useReaderStore } from "@/stores/useReaderStore";
 import { useNavigate } from "react-router";
 import { Book } from "@/db/schema";
 import { trimBookTitle } from "@/lib/helpers/epub";
+import { getFileExtension } from "@/lib/helpers/fs";
+import { Badge } from "./ui/badge";
+import { useHistoryStore } from "@/stores/useHistoryStore";
 
 export default function BookCard({
   book,
@@ -15,20 +18,41 @@ export default function BookCard({
   index: number;
   imgSrc?: string;
 }) {
-  const setOpenBook = useReaderStore((state) => state.setOpenBook);
+  const closeBook = useReaderStore((state) => state.closeBook);
   const navigate = useNavigate();
 
-  function handleOpenBook(fileName: string) {
-    setOpenBook(fileName);
+  async function handleOpenBook(fileName: string) {
+    closeBook();
+    const setLastOpenedBook = useHistoryStore.getState().setLastOpenedBook;
+    await setLastOpenedBook(fileName);
+    navigate("/");
+
     navigate("/");
   }
 
   return (
     <Card
       key={index}
-      className="overflow-hidden bg-card border-border hover:border-primary/50 transition-colors p-0 "
+      className="overflow-hidden bg-card border-border hover:border-primary/50 transition-colors p-0"
     >
-      <div className="aspect-[2/3] bg-muted relative">
+      <div className="aspect-2/3 bg-muted relative">
+        {/* Badge positioned absolutely */}
+        <div className="absolute top-5 left-5 z-20 ">
+          <Badge
+            variant="secondary"
+            className="px-3 py-1 flex items-center gap-1"
+          >
+            <img
+              src={`/${getFileExtension(book.fileName)}.svg`}
+              className="w-3"
+            />
+            <small>
+              {getFileExtension(book.fileName)}{" "}
+              {book.pages && `| ${book.pages} pages`}
+            </small>
+          </Badge>
+        </div>
+
         {imgSrc ? (
           <img
             src={imgSrc}
@@ -42,38 +66,13 @@ export default function BookCard({
             className="w-24 h-24 object-contain opacity-50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
           />
         )}
-
-        {/* Progress / completed badge commented for now */}
-        {/*
-                {book.progress === 100 && (
-                  <div className="absolute top-2 right-2 bg-primary/90 rounded-full p-1">
-                    <CheckCircle2 className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                )}
-                */}
       </div>
+
       <div className="p-4">
-        <h3 className="font-semibold text-foreground mb-1 ">
-          {trimBookTitle(book.title)}
+        <h3 className="font-semibold text-foreground mb-1">
+          <span>{trimBookTitle(book.title)}</span>
         </h3>
         <p className="text-sm text-muted-foreground mb-3">{book.author}</p>
-
-        {/* Progress bar commented for now */}
-        {/*
-                {book.progress > 0 && book.progress < 100 && (
-                  <>
-                    <div className="w-full bg-muted rounded-full h-2 mb-2">
-                      <div
-                        className="bg-primary h-2 rounded-full transition-all"
-                        style={{ width: `${book.progress}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      {book.progress}% complete
-                    </p>
-                  </>
-                )}
-                */}
 
         <Button
           onClick={() => handleOpenBook(book.fileName)}
@@ -81,25 +80,6 @@ export default function BookCard({
           size="sm"
           className="w-full"
         >
-          {/* Progress / reading status commented for now */}
-          {/*
-                  {book.progress === 100 ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Completed
-                    </>
-                  ) : book.progress > 0 ? (
-                    <>
-                      <BookOpen className="w-4 h-4 mr-2" />
-                      Continue Reading
-                    </>
-                  ) : (
-                    <>
-                      <Clock className="w-4 h-4 mr-2" />
-                      Start Reading
-                    </>
-                  )}
-                  */}
           Open
         </Button>
       </div>

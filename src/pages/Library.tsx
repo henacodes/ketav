@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 export function LibraryPage() {
   const [libraryBooks, setLibraryBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
-  const { settings, fetchSettings } = useSettingsStore((state) => state);
+  const { settings } = useSettingsStore((state) => state);
 
   const coverImages = useBookCovers(libraryBooks, "image/jpeg");
 

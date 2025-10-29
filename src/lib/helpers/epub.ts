@@ -34,15 +34,16 @@ export async function collectEpubs(files: DirEntry[]) {
   return epubs;
 }
 
-type BookIdParams = EpubMetadata & { fileName?: string };
+type BookIdParams = EpubMetadata & { fileName?: string; pages?: number };
 
 export function generateBookId({
   title,
   author,
   cover,
   fileName,
+  pages,
 }: BookIdParams): string {
-  title = title || `${cover}` + `${fileName}`; // fallback to chapter and TOC length
+  title = title || `${fileName}` + `${cover}` + `${pages}`; // fallback to chapter and TOC length
   author = author || "";
   const normalize = (str: string) =>
     str

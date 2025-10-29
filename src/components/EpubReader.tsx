@@ -230,8 +230,6 @@ export default function EpubReader({ epub }: ReaderProps) {
     }
   }
 
-  // ----- end helpers -----
-
   function scrollToFragment(fragmentId: string) {
     if (!contentRef.current) return;
     const doc = contentRef.current;
@@ -642,17 +640,17 @@ export default function EpubReader({ epub }: ReaderProps) {
   );
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-[93vh] ">
       <SettingsDialog />
       {/* Sidebar TOC (left) - hidden on small screens */}
-      <aside className="w-72 border-r border-border bg-card overflow-auto hidden md:block">
+      <aside className="w-72 border-r border-border  overflow-auto hidden md:block bg-card  ">
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4">
           <h2 className="text-sm font-semibold text-foreground">
             Table of Contents
           </h2>
         </div>
 
-        <nav className="p-4 space-y-1 overflow-auto max-h-[87vh]">
+        <nav className="p-4 space-y-1 overflow-auto    ">
           {epub.toc && epub.toc.length > 0 ? (
             renderToc(epub.toc)
           ) : (

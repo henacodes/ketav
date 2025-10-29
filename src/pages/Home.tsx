@@ -1,48 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router";
 import EpubReader from "@/components/EpubReader";
+import PdfReader from "@/components/PdfReader";
 import { useReaderStore } from "@/stores/useReaderStore";
 import { BookAlert, MoveRight, AlertTriangle } from "lucide-react";
-import { STORE_KEYS } from "@/lib/constants";
+import { getFileExtension } from "@/lib/helpers/fs";
+import { OpenPdf } from "@/lib/types/pdf";
+import { useHistoryStore } from "@/stores/useHistoryStore";
 
 export function HomePage() {
   const { openBook, error, setOpenBook } = useReaderStore();
+  const { history, loadHistory } = useHistoryStore();
 
-  const [lastOpenedBookFileName, setLastOpenedBookFilename] = useState<
-    string | null
-  >(null);
-
+  // Load last opened book from store on mount
   useEffect(() => {
-    const stored =
-      typeof window !== "undefined"
-        ? localStorage.getItem(STORE_KEYS.lastOpenedBook)
-        : null;
-    setLastOpenedBookFilename(stored);
-  }, []);
+    (async () => {
+      if (!openBook && history.lastOpenedBookFileName) {
+        console.log("historyhistory", history);
+        setOpenBook(history.lastOpenedBookFileName);
+      }
+    })();
+  }, [loadHistory]);
 
-  useEffect(() => {
-    if (!openBook?.book && lastOpenedBookFileName) {
-      setOpenBook(lastOpenedBookFileName);
-    }
-    // only depend on the pieces we care about
-  }, [lastOpenedBookFileName, openBook?.book, setOpenBook]);
+  // Determine filename and extension from openBook
+  const fileName =
+    openBook?.metadata && (openBook.metadata as any).fileName
+      ? (openBook.metadata as any).fileName
+      : null;
+  const ext = fileName ? getFileExtension(fileName) : null;
 
-  // If a book is already open, render the reader immediately
-  if (openBook?.book) {
+  // EPUB reader
+  if (ext === "epub" && (openBook as any)?.book) {
     return (
       <div className="h-[87vh]">
-        <EpubReader epub={openBook.book} />
+        <EpubReader epub={(openBook as any).book} />
       </div>
     );
   }
 
-  // Render empty state / error
+  // PDF reader
+  if (ext === "pdf" && (openBook as any)?.fileBytes) {
+    return (
+      <div className="h-[87vh]">
+        <PdfReader
+          data={(openBook as any).fileBytes}
+          openBook={openBook as OpenPdf}
+          fileName={fileName || undefined}
+        />
+      </div>
+    );
+  }
+
+  // Render empty/error state
   const renderErrorBody = () => {
     if (!error) return null;
     const message = error instanceof Error ? error.message : String(error);
-    // some errors might include detail property
     const detail =
       error && typeof error === "object" && "detail" in (error as any)
         ? (error as any).detail

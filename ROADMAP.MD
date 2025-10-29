@@ -37,16 +37,15 @@ Each phase represents a milestone toward a stable, production-ready release.
 - [x] multiple font family choices
 - [x] Alignment based on preference
 - [x] Remember last opened Book with its active chapter
-- [ ] Next and Prev button
-- [ ] Show how much is the daily goal progress of the book while reading if there is a goal associated with the book
+- [x] Next and Prev button
 
 ## v0.4.x - Support for PDF
 
 > Goal: Add support for PDF
 
-- [ ] A separate reader component for PDF
-- [ ] Expand the Book Goal and Stat tables to include fields like page_number to accomodate pdf books
-- [ ] Add UI indicators to differentiate PDF from EPUB
+- [x] A separate reader component for PDF
+- [x] Expand the Book Goal and Stat tables to include fields like page_number to accomodate pdf books
+- [x] Add UI indicators to differentiate PDF from EPUB
 
 ## v0.5.x - Annotation, Highlighting and Related Features
 
@@ -58,8 +57,15 @@ Each phase represents a milestone toward a stable, production-ready release.
 - [ ] Have a personal vocabulary table with meanings for each word
 - [ ] View all annotations on a sidebar
 
-## v0.5.x - Donwload Books
+## v0.6.x - Download Books from Libgen
 
 > Goal: implement book search/download feature
 
 - [ ] Search and Download books from lib-gen
+
+## v0.7.x - Book Curation
+
+> Goal implement ways in whih users can curate their books
+
+- [ ] implement in-app collection of books
+- [ ] add a special collection names reading-list

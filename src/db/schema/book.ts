@@ -7,6 +7,7 @@ export const books = sqliteTable("books", {
   author: text("author").notNull(),
   coverImagePath: text("cover_image_path"),
   fileName: text("file_name").notNull(),
+  pages: integer("pages"),
 });
 
 export type Book = InferSelectModel<typeof books>;
