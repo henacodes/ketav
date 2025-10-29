@@ -156,8 +156,9 @@ export function SettingsDialog() {
                 textAlign: localSettings.textAlignment as any,
               }}
             >
-              The quick brown fox jumps over the lazy dog. This is how your text
-              will appear in the reader.
+              Roses are red, violets are blue, Unexpected token on line 32.
+              Roses are red, violets are blue, Unexpected token on line 32.Roses
+              are red, violets are blue, Unexpected token on line 32.
             </p>
           </div>
         </div>

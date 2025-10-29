@@ -22,7 +22,7 @@ export function HomePage() {
         setOpenBook(history.lastOpenedBookFileName);
       }
     })();
-  }, [loadHistory]);
+  }, [loadHistory, history]);
 
   // Determine filename and extension from openBook
   const fileName =
