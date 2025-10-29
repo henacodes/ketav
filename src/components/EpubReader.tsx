@@ -1,15 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Epub, TocEntry } from "epubix";
 import { Button } from "./ui/button";
-import { TableOfContents } from "lucide-react";
+import {
+  Settings,
+  TableOfContents,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useReadingTracker } from "@/hooks/useReadingTimer";
-import { generateBookId, prepareChapterHtml } from "@/lib/helpers/epub";
+import {
+  buildTocSpineRanges,
+  escapeHtml,
+  generateBookId,
+  prepareChapterHtml,
+} from "@/lib/helpers/epub";
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import useSettingsStore from "@/stores/useSettingsStore";
+import { useReaderStore } from "@/stores/useReaderStore";
+import { SettingsDialog } from "./dialogs/SettingsDialog";
 
 interface ReaderProps {
   epub: Epub;
@@ -18,6 +31,15 @@ interface ReaderProps {
 export default function EpubReader({ epub }: ReaderProps) {
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
   const [htmlContent, setHtmlContent] = useState<string>("<div />");
+  const tocRangesRef = useRef<Map<string, { start: number; end: number }>>(
+    new Map()
+  );
+
+  const { settings } = useSettingsStore((store) => store);
+  const toggleSettingsDialog = useReaderStore(
+    (store) => store.toggleSettingsDialog
+  );
+
   useReadingTracker({
     bookId: generateBookId({
       title: epub.metadata.title,
@@ -36,6 +58,403 @@ export default function EpubReader({ epub }: ReaderProps) {
 
   // drawer state for small screens
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // stable key for TOC items based on tree path
+  const tocKey = (path: string, idx: number) =>
+    path ? `${path}-${idx}` : `${idx}`;
+
+  // find first href to auto-open
+  const firstTocHref = useMemo(() => {
+    if (!epub?.toc || epub.toc.length === 0) return null;
+    const findFirstHref = (entries: TocEntry[]): string | null => {
+      for (const e of entries) {
+        if (e.href) return e.href;
+        if (e.children && e.children.length > 0) {
+          const found = findFirstHref(e.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return findFirstHref(epub.toc) || null;
+  }, [epub]);
+
+  // ----- NEW: helpers to find current TOC node path and prev/next logic -----
+  // Represent path as array of indices, e.g. [0,2,1]
+  function resolveNormalized(href: string | undefined) {
+    if (!href) return null;
+    try {
+      const r = epub.resolveHref(href);
+      return r?.normalizedPath ?? href;
+    } catch {
+      return href;
+    }
+  }
+
+  // returns path array or null
+  function findTocPathByHref(href: string | null): number[] | null {
+    if (!href || !epub.toc) return null;
+    const clickNorm = resolveNormalized(href) ?? href;
+
+    const path: number[] = [];
+    let found: number[] | null = null;
+
+    function walk(entries: TocEntry[], depthPath: number[]) {
+      for (let i = 0; i < entries.length; i++) {
+        const e = entries[i];
+        const candidatePath = depthPath.concat(i);
+        if (e.href) {
+          const tocNorm = resolveNormalized(e.href) ?? e.href;
+          if (tocNorm === clickNorm) {
+            found = candidatePath;
+            return true;
+          }
+        }
+        if (e.children && e.children.length > 0) {
+          if (walk(e.children, candidatePath)) return true;
+        }
+      }
+      return false;
+    }
+
+    walk(epub.toc, []);
+    return found;
+  }
+
+  // get entry at a given path (returns the TocEntry or null)
+  function getTocEntryAtPath(path: number[]): TocEntry | null {
+    let entries = epub.toc;
+    if (!entries) return null;
+    for (let i = 0; i < path.length; i++) {
+      const idx = path[i];
+      if (!entries[idx]) return null;
+      const entry = entries[idx];
+      if (i === path.length - 1) return entry;
+      entries = entry.children || [];
+    }
+    return null;
+  }
+
+  // get the list (siblings) for a given path (parent's children)
+  function getSiblingsForPath(path: number[]): TocEntry[] {
+    if (path.length <= 1) {
+      return epub.toc || [];
+    }
+    const parentPath = path.slice(0, -1);
+    const parent = getTocEntryAtPath(parentPath);
+    return parent?.children || [];
+  }
+
+  // find first href in a node (pre-order)
+  function findFirstHrefInNode(node: TocEntry | undefined): string | null {
+    if (!node) return null;
+    if (node.href) return node.href;
+    if (node.children) {
+      for (const c of node.children) {
+        const f = findFirstHrefInNode(c);
+        if (f) return f;
+      }
+    }
+    return null;
+  }
+
+  // find last href in a node (deepest descendant)
+  function findLastHrefInNode(node: TocEntry | undefined): string | null {
+    if (!node) return null;
+    if (node.children && node.children.length > 0) {
+      // go to last child and descend
+      const last = node.children[node.children.length - 1];
+      return findLastHrefInNode(last) ?? last.href ?? null;
+    }
+    return node.href ?? null;
+  }
+
+  // Next: prioritize nearest sibling; if none, activate nearest ancestor that has href
+  function findNextTocHref(currentHref: string | null): string | null {
+    if (!epub.toc) return null;
+    const path = findTocPathByHref(currentHref);
+    if (!path) return null;
+
+    // try to find next sibling at same level or descend into first child of next sibling
+    let currentPath = [...path];
+    while (true) {
+      const siblings = getSiblingsForPath(currentPath);
+      const idx = currentPath[currentPath.length - 1];
+      if (idx + 1 < siblings.length) {
+        const candidate = siblings[idx + 1];
+        // choose first href in candidate (descend if needed)
+        const firstHref = findFirstHrefInNode(candidate);
+        if (firstHref) return firstHref;
+        // if candidate has no href anywhere, skip and continue searching (rare)
+        currentPath = currentPath.slice(0, -1).concat(idx + 1);
+        continue;
+      } else {
+        // no next sibling; per requirement, activate the parent (nearest ancestor with href)
+        currentPath = currentPath.slice(0, -1);
+        if (currentPath.length === 0) return null;
+        const parentEntry = getTocEntryAtPath(currentPath);
+        if (parentEntry?.href) return parentEntry.href;
+        // otherwise continue up to find an ancestor with href
+        continue;
+      }
+    }
+  }
+
+  // Prev: prioritize nearest sibling (previous), if exists go to its deepest descendant;
+  // if none, activate parent (nearest ancestor that has href)
+  function findPrevTocHref(currentHref: string | null): string | null {
+    if (!epub.toc) return null;
+    const path = findTocPathByHref(currentHref);
+    if (!path) return null;
+
+    let currentPath = [...path];
+    while (true) {
+      const siblings = getSiblingsForPath(currentPath);
+      const idx = currentPath[currentPath.length - 1];
+      if (idx - 1 >= 0) {
+        const candidate = siblings[idx - 1];
+        // go to deepest descendant (last href) of previous sibling
+        const lastHref = findLastHrefInNode(candidate);
+        if (lastHref) return lastHref;
+        // if candidate has no href, skip further left
+        currentPath = currentPath.slice(0, -1).concat(idx - 1);
+        continue;
+      } else {
+        // no previous sibling: activate parent if it has href; otherwise go up
+        currentPath = currentPath.slice(0, -1);
+        if (currentPath.length === 0) return null;
+        const parentEntry = getTocEntryAtPath(currentPath);
+        if (parentEntry?.href) return parentEntry.href;
+        continue;
+      }
+    }
+  }
+
+  // ----- end helpers -----
+
+  function scrollToFragment(fragmentId: string) {
+    if (!contentRef.current) return;
+    const doc = contentRef.current;
+    try {
+      const target = doc.querySelector(
+        `#${CSS.escape(fragmentId)}`
+      ) as HTMLElement | null;
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+    } catch {
+      const t = doc.querySelector(`#${fragmentId}`) as HTMLElement | null;
+      if (t) {
+        t.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+    }
+    const alt = doc.querySelector(
+      `[name="${fragmentId}"]`
+    ) as HTMLElement | null;
+    if (alt) alt.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function toggleExpand(key: string) {
+    setExpandedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function onSelectHref(href?: string) {
+    if (!href) return;
+    setSelectedHref(href);
+    // if the drawer is open (small screen), close it after selecting
+    if (drawerOpen) setDrawerOpen(false);
+  }
+
+  // load content for a given href (may include fragment)
+  async function loadContentForHref(href: string | null) {
+    if (!href) return;
+    const myLoadId = ++loadCounterRef.current;
+
+    // Free previous chapter resources early
+    try {
+      if (chapterCleanupRef.current) {
+        await chapterCleanupRef.current().catch(() => {});
+        chapterCleanupRef.current = null;
+      }
+    } catch {
+      /* ignore cleanup errors */
+    }
+
+    // Clear UI immediately so previous book content (images) disappear
+    setHtmlContent("<div />");
+
+    try {
+      // Resolve fragment (if any) from the passed href
+      const fragment = ((): string | undefined => {
+        try {
+          const r = epub.resolveHref(href);
+          return (
+            r?.fragment ?? (href.includes("#") ? href.split("#")[1] : undefined)
+          );
+        } catch {
+          return href.includes("#") ? href.split("#")[1] : undefined;
+        }
+      })();
+
+      // Determine if this href corresponds to a TOC entry that maps to a spine range
+      // (tocRangesRef is expected to be built elsewhere when the epub is loaded)
+      let range: { start: number; end: number } | undefined;
+      try {
+        const ranges = tocRangesRef.current; // Map<string, {start,end}>
+        // 1) direct key match
+        if (ranges.has(href)) {
+          range = ranges.get(href);
+        } else {
+          // 2) try to match by normalized path: resolve the clicked href and compare to resolved toc hrefs
+          const resolvedClick = epub.resolveHref(href);
+          const clickNorm = resolvedClick?.normalizedPath ?? href;
+          for (const [tocHref, r] of ranges.entries()) {
+            try {
+              const resolvedToc = epub.resolveHref(tocHref);
+              const tocNorm = resolvedToc?.normalizedPath ?? tocHref;
+              if (tocNorm === clickNorm) {
+                range = r;
+                break;
+              }
+            } catch {
+              // ignore and continue
+            }
+          }
+        }
+      } catch {
+        // if anything fails while looking up ranges, treat as no-range (fallback to single chapter)
+        range = undefined;
+      }
+
+      // Helper: prepare & set content from a single html string (calls prepareChapterHtml)
+      const prepareAndSet = async (
+        primaryHrefForBase: string,
+        htmlString: string
+      ) => {
+        const { html, cleanup } = await prepareChapterHtml({
+          epub,
+          chapterHref: primaryHrefForBase,
+          chapterHtml: htmlString,
+        });
+
+        // check for staleness
+        if (myLoadId !== loadCounterRef.current) {
+          await cleanup().catch(() => {});
+          return false;
+        }
+
+        setHtmlContent(html);
+        chapterCleanupRef.current = cleanup;
+        return true;
+      };
+
+      // If we have a valid range and it actually covers at least one spine item, concat multiple spine items
+      if (
+        range &&
+        typeof range.start === "number" &&
+        typeof range.end === "number" &&
+        range.end > range.start
+      ) {
+        // Defensive limit: avoid concatenating absurd numbers of chapters (protect memory)
+        const MAX_CHAPTERS_TO_CONCAT = 50;
+        const count = Math.min(range.end - range.start, MAX_CHAPTERS_TO_CONCAT);
+        const endIndex = range.start + count;
+
+        // Load & concatenate chapters in the range
+        const chaptersHtml: string[] = [];
+        const chapterHrefs: string[] = [];
+        for (let i = range.start; i < endIndex; i++) {
+          const ch = epub.chapters?.[i];
+          if (!ch) continue;
+          let content = ch.content;
+          if (!content) {
+            try {
+              const resolved = epub.resolveHref(ch.href || "");
+              if (resolved?.normalizedPath) {
+                const buf = await epub.getFile(resolved.normalizedPath);
+                if (buf) content = new TextDecoder().decode(buf);
+              }
+            } catch {
+              // ignore and fallback
+            }
+          }
+          if (!content) {
+            content = `<div class="text-muted-foreground"><em>Unable to load chapter ${escapeHtml(
+              ch.href || `#${i}`
+            )}</em></div>`;
+          }
+          // wrap so we can distinguish chapter boundaries and scope later if needed
+          chaptersHtml.push(
+            `<div data-chapter-index="${i}" data-chapter-href="${escapeHtml(
+              ch.href ?? ""
+            )}">${content}</div>`
+          );
+          chapterHrefs.push(ch.href ?? "");
+        }
+
+        const combinedHtml = chaptersHtml.join("\n");
+        const primaryHref = chapterHrefs[0] || href;
+
+        // prepare (resolve resources, inject base, create blobs or use SW, etc.)
+        const ok = await prepareAndSet(primaryHref, combinedHtml);
+        if (!ok) return; // stale, cleanup already handled inside helper
+
+        // after setting, scroll to fragment if needed
+        if (fragment) {
+          setTimeout(() => scrollToFragment(fragment), 50);
+        } else {
+          if (contentRef.current) contentRef.current.scrollTop = 0;
+        }
+
+        return;
+      }
+
+      // Fallback path: load a single chapter (existing behavior)
+      // Try epub.getChapterByHref first (may already have parsed chapter.content)
+      const chapterResult = epub.getChapterByHref(href) || {};
+      const chapter = chapterResult.chapter;
+      let content: string | undefined = chapter?.content;
+
+      if (!content) {
+        try {
+          const resolved = epub.resolveHref(href);
+          if (resolved?.normalizedPath) {
+            const fileBuffer = await epub.getFile(resolved.normalizedPath);
+            if (fileBuffer) content = new TextDecoder().decode(fileBuffer);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!content) {
+        content = `<div class="text-muted-foreground"><em>Unable to load content for ${escapeHtml(
+          href
+        )}</em></div>`;
+      }
+
+      const ok = await prepareAndSet(href, content);
+      if (!ok) return; // stale and cleaned up
+
+      // scroll to fragment if present
+      if (fragment) {
+        setTimeout(() => scrollToFragment(fragment), 50);
+      } else {
+        if (contentRef.current) contentRef.current.scrollTop = 0;
+      }
+    } catch (err) {
+      // Ensure we clear the cleanup ref on error so next load starts fresh
+      chapterCleanupRef.current = null;
+      console.error("loadContentForHref failed:", err);
+      // Optionally show fallback UI: keep the "Unable to load" message already set above
+    }
+  }
+
+  useEffect(() => {
+    tocRangesRef.current = buildTocSpineRanges(epub);
+  }, [epub]);
 
   // When the epub instance changes (opening a different book), immediately:
   //  - mark any in-flight loads stale
@@ -71,102 +490,6 @@ export default function EpubReader({ epub }: ReaderProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [epub]);
 
-  // stable key for TOC items based on tree path
-  const tocKey = (path: string, idx: number) =>
-    path ? `${path}-${idx}` : `${idx}`;
-
-  // find first href to auto-open
-  const firstTocHref = useMemo(() => {
-    if (!epub?.toc || epub.toc.length === 0) return null;
-    const findFirstHref = (entries: TocEntry[]): string | null => {
-      for (const e of entries) {
-        if (e.href) return e.href;
-        if (e.children && e.children.length > 0) {
-          const found = findFirstHref(e.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    return findFirstHref(epub.toc) || null;
-  }, [epub]);
-
-  // load content for a given href (may include fragment)
-  async function loadContentForHref(href: string | null) {
-    if (!href) return;
-    const myLoadId = ++loadCounterRef.current;
-
-    // call previous cleanup before starting new load to free resources early
-    try {
-      if (chapterCleanupRef.current) {
-        await chapterCleanupRef.current().catch(() => {});
-        chapterCleanupRef.current = null;
-      }
-    } catch {
-      /* ignore cleanup errors */
-    }
-
-    // clear current UI immediately so the previous book's images don't remain visible
-    setHtmlContent("<div />");
-
-    try {
-      const result = epub.getChapterByHref(href) || {};
-      const chapter = result.chapter;
-      const fragment =
-        result.fragment ||
-        (href.includes("#") ? href.split("#")[1] : undefined);
-
-      let content: string | undefined = chapter?.content;
-
-      if (!content) {
-        try {
-          const resolved = epub.resolveHref(href);
-          if (resolved && resolved.normalizedPath) {
-            const fileBuffer = await epub.getFile(resolved.normalizedPath);
-            if (fileBuffer) content = new TextDecoder().decode(fileBuffer);
-          }
-        } catch {
-          // ignore
-        }
-      }
-
-      if (!content) {
-        content = `<div class="text-muted-foreground"><em>Unable to load content for ${escapeHtml(
-          href
-        )}</em></div>`;
-      }
-
-      const { html, cleanup } = await prepareChapterHtml({
-        epub,
-        chapterHref: href,
-        chapterHtml: content,
-      });
-
-      if (myLoadId !== loadCounterRef.current) {
-        // stale: run cleanup and do not set the html
-        await cleanup().catch(() => {});
-        return;
-      }
-
-      // set content and register cleanup
-      setHtmlContent(html);
-      chapterCleanupRef.current = cleanup;
-
-      // scroll to fragment if present
-      if (fragment) {
-        setTimeout(() => scrollToFragment(fragment), 50);
-      } else {
-        if (contentRef.current) contentRef.current.scrollTop = 0;
-      }
-    } catch {
-      chapterCleanupRef.current = null;
-    }
-  }
-
-  // Intercept clicks inside the rendered EPUB content so links (including the TOC page)
-  // that point to relative EPUB resources/chapter hrefs are handled by the app.
-  // This prevents the browser from attempting to navigate relative to the page origin
-  // (which would break resources) and lets us resolve hrefs via epub.resolveHref/getChapterByHref.
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
@@ -224,48 +547,6 @@ export default function EpubReader({ epub }: ReaderProps) {
     };
   }, [contentRef, epub, drawerOpen]);
 
-  // escape fallback HTML
-  function escapeHtml(s: string) {
-    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-
-  // scroll to element inside rendered XHTML
-  function scrollToFragment(fragmentId: string) {
-    if (!contentRef.current) return;
-    const doc = contentRef.current;
-    try {
-      const target = doc.querySelector(
-        `#${CSS.escape(fragmentId)}`
-      ) as HTMLElement | null;
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-    } catch {
-      // CSS.escape may throw if not supported; fall back to naive selector
-      const t = doc.querySelector(`#${fragmentId}`) as HTMLElement | null;
-      if (t) {
-        t.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-    }
-    const alt = doc.querySelector(
-      `[name="${fragmentId}"]`
-    ) as HTMLElement | null;
-    if (alt) alt.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function toggleExpand(key: string) {
-    setExpandedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
-  }
-
-  function onSelectHref(href?: string) {
-    if (!href) return;
-    setSelectedHref(href);
-    // if the drawer is open (small screen), close it after selecting
-    if (drawerOpen) setDrawerOpen(false);
-  }
-
   useEffect(() => {
     if (!selectedHref && firstTocHref) setSelectedHref(firstTocHref);
   }, [firstTocHref, selectedHref]);
@@ -281,7 +562,7 @@ export default function EpubReader({ epub }: ReaderProps) {
     rendered = new Set<string>()
   ) {
     return (
-      <ul className="space-y-1 m-0 p-0 list-none">
+      <ul className="space-y-1 m-0 p-0 list-none  ">
         {entries.map((entry, idx) => {
           const key = tocKey(path, idx);
           const hasChildren = !!(entry.children && entry.children.length > 0);
@@ -289,7 +570,7 @@ export default function EpubReader({ epub }: ReaderProps) {
           const isSelected = selectedHref === entry.href;
 
           return (
-            <li key={key} className="list-none">
+            <li key={key} className="list-none ">
               <div className="flex items-center gap-2 px-3">
                 {hasChildren ? (
                   <button
@@ -350,8 +631,19 @@ export default function EpubReader({ epub }: ReaderProps) {
     };
   }, []);
 
+  // compute prev/next for UI (memoized)
+  const prevHref = useMemo(
+    () => findPrevTocHref(selectedHref),
+    [selectedHref, epub.toc]
+  );
+  const nextHref = useMemo(
+    () => findNextTocHref(selectedHref),
+    [selectedHref, epub.toc]
+  );
+
   return (
     <div className="flex h-full">
+      <SettingsDialog />
       {/* Sidebar TOC (left) - hidden on small screens */}
       <aside className="w-72 border-r border-border bg-card overflow-auto hidden md:block">
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4">
@@ -360,7 +652,7 @@ export default function EpubReader({ epub }: ReaderProps) {
           </h2>
         </div>
 
-        <nav className="p-4 space-y-1 overflow-auto max-h-[85vh]">
+        <nav className="p-4 space-y-1 overflow-auto max-h-[87vh]">
           {epub.toc && epub.toc.length > 0 ? (
             renderToc(epub.toc)
           ) : (
@@ -432,14 +724,17 @@ export default function EpubReader({ epub }: ReaderProps) {
             </div>
           </div>
 
-          {/*    <Button
+          <Button
             variant="ghost"
             size="sm"
+            onClick={() => {
+              toggleSettingsDialog(true);
+            }}
             className="text-primary hover:text-primary/80"
           >
-            <Bookmark className="w-4 h-4 mr-2" />
-            Bookmark
-          </Button> */}
+            <Settings className="w-4 h-4 mr-2" />
+            Settings
+          </Button>
         </header>
 
         <div className="flex-1 p-6 bg-card  ">
@@ -448,7 +743,35 @@ export default function EpubReader({ epub }: ReaderProps) {
             className="max-w-7xl mx-auto overflow-auto max-h-[81.4vh] font-serif leading-relaxed space-y-6 epub-reader-container"
             style={{ fontSize: `${fontSize}px` }}
           >
-            <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            <div
+              dangerouslySetInnerHTML={{ __html: htmlContent }}
+              style={{
+                textAlign: settings?.textAlignment,
+                fontFamily: settings?.fontFamily,
+              }}
+            />
+            {/* Prev / Next navigation appended to the end of rendered content */}
+            <div className="flex items-center justify-between mt-6">
+              <Button
+                variant="outline"
+                onClick={() => prevHref && onSelectHref(prevHref)}
+                disabled={!prevHref}
+                className="flex items-center gap-2"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Prev
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => nextHref && onSelectHref(nextHref)}
+                disabled={!nextHref}
+                className="flex items-center gap-2"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>

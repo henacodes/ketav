@@ -15,8 +15,7 @@ export function SettingsPage() {
   const [_, setSelectedDir] = useState<string | null>(null);
   const { setTheme } = useTheme();
 
-  const { settings, fetchSettings, updateLibraryFolderPath } =
-    useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const [fullLibraryPath, setFullLibraryPath] = useState<string | null>(null);
   const [currentTheme, setCurrentTheme] = useState<Theme>("light");
 
@@ -58,7 +57,7 @@ export function SettingsPage() {
     subfolder = subfolder.replace(/^[/\\]+/, "");
 
     // Update store with the subfolder
-    await updateLibraryFolderPath(subfolder);
+    await updateSetting("libraryFolderPath", subfolder);
 
     // Compute full path for UX display
     const fullPath = await join(normalizedDocs, subfolder);
@@ -67,9 +66,6 @@ export function SettingsPage() {
     // Optionally update local state if needed
     setSelectedDir(subfolder);
   }
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
 
   useEffect(() => {
     async function updateFullPath() {

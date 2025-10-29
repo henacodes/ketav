@@ -34,13 +34,13 @@ Each phase represents a milestone toward a stable, production-ready release.
 
 > Goal: Make the epub reader page more customizable
 
-- [ ] multiple font family choices
-- [ ] Alignment based on preference
-- [ ] Remember last opened Book with its active chapter
+- [x] multiple font family choices
+- [x] Alignment based on preference
+- [x] Remember last opened Book with its active chapter
 - [ ] Next and Prev button
 - [ ] Show how much is the daily goal progress of the book while reading if there is a goal associated with the book
 
-## v0.5.x - Support for PDF
+## v0.4.x - Support for PDF
 
 > Goal: Add support for PDF
 
@@ -48,7 +48,7 @@ Each phase represents a milestone toward a stable, production-ready release.
 - [ ] Expand the Book Goal and Stat tables to include fields like page_number to accomodate pdf books
 - [ ] Add UI indicators to differentiate PDF from EPUB
 
-## v0.4.x - Annotation, Highlighting and Related Features
+## v0.5.x - Annotation, Highlighting and Related Features
 
 > Goal: Implement features that require selecting specific sections of a book
 

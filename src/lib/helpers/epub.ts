@@ -1,11 +1,15 @@
 import { DirEntry } from "@tauri-apps/plugin-fs";
-import { Epub, EpubMetadata, loadEpubMetadata } from "epubix";
+import { Epub, EpubMetadata, loadEpubMetadata, TocEntry } from "epubix";
 import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { getSettings } from "./settings";
 import type { LibraryEpub } from "../types/epub";
 
 export function filterEpubFiles(files: DirEntry[]) {
   return files.filter((file) => file.isFile && file.name.endsWith(".epub"));
+}
+
+export function escapeHtml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 export async function collectEpubs(files: DirEntry[]) {
@@ -74,15 +78,30 @@ export function trimBookTitle(title: string, maxLength = 50): string {
   // Append ellipsis to show it was shortened
   return trimmed + "…";
 }
-
-// Note: Ensure DOM lib is available in tsconfig (lib: ["dom", ...])
+/**
+ * prepare-chapter-html.ts
+ *
+ * Enhanced prepareChapterHtml that optionally disables EPUB stylesheet/style-blocks
+ * while preserving resource access (images/fonts/etc).
+ *
+ * - By default this function preserves app behavior: it resolves resource URLs,
+ *   creates blob/object URLs (or posts to SW if you extend it) and rewrites img/src/srcset/style URLs.
+ * - New option `disableStyles` (boolean):
+ *   - if true: removes all <style> blocks and <link rel="stylesheet"> nodes from the parsed chapter
+ *     so EPUB CSS cannot leak into your app UI. The function still scans those removed CSS blocks
+ *     for url(...) references and fetches those assets so they remain available (e.g. for pre-caching).
+ *   - inline style attributes are left intact by default so background images and sizing still render.
+ *     If you want to remove inline style attributes too, pass `removeInlineStyles: true`.
+ *
+ * Note: this implementation assumes `epub.resolveHref` and `epub.getFile` are available on the Epub instance.
+ * It uses the same object-url caching / refcount pattern as before.
+ */
 
 type ResourceUsage = {
   normalizedPath: string;
   mediaType?: string | null;
-  // location info to update DOM in-place
-  node: Element;
-  attr: string; // "src" | "srcset" | "style" | "href" | etc.
+  node: Element | null; // may be null for style-blocks we've removed
+  attr: string; // "src" | "srcset" | "style" | "href" | "style-block" | etc.
   original: string;
   descriptor?: string | null; // for srcset candidates
   fragment?: string | null;
@@ -103,10 +122,20 @@ export async function prepareChapterHtml(opts: {
     { objectUrl: string; refCount: number; mediaType?: string | null }
   >;
   preferBlobUrl?: boolean; // default true
+  // New options:
+  disableStyles?: boolean; // default false. If true, remove <style> and <link rel=stylesheet> nodes.
+  removeInlineStyles?: boolean; // default false. If true, remove inline `style` attributes as well.
 }): Promise<PrepareResult> {
-  const { epub, chapterHtml, cache = new Map(), preferBlobUrl = true } = opts;
+  const {
+    epub,
+    chapterHtml,
+    cache = new Map(),
+    preferBlobUrl = true,
+    disableStyles = true,
+    removeInlineStyles = false,
+  } = opts;
 
-  // Helper: simple extension -> mime map fallback
+  // simple extension -> mime map fallback
   const mimeFromExt = (path: string | undefined): string | null => {
     if (!path) return null;
     const p = path.split("?")[0].split("#")[0].toLowerCase();
@@ -119,27 +148,29 @@ export async function prepareChapterHtml(opts: {
     if (p.endsWith(".css")) return "text/css";
     if (p.endsWith(".mp4")) return "video/mp4";
     if (p.endsWith(".mp3")) return "audio/mpeg";
-    return null;
+    if (p.endsWith(".woff")) return "font/woff";
+    if (p.endsWith(".woff2")) return "font/woff2";
+    if (p.endsWith(".ttf")) return "font/ttf";
+    return "application/octet-stream";
   };
 
   // Parse HTML (use text/html to be tolerant)
   const parser = new DOMParser();
-  // Some chapters are XHTML; using text/html is more forgiving and keeps innerHTML roundtrip manageable
   const doc = parser.parseFromString(chapterHtml, "text/html");
 
-  // Build a list of usages to resolve later
+  // We'll collect resource usages here
   const usages: ResourceUsage[] = [];
 
-  // Normalize access to epub.resources for mediaType lookup (best-effort)
+  // Best-effort manifest lookup
   const resourcesIndex: Record<string, { mediaType?: string } | undefined> =
     (epub as any).resources && typeof (epub as any).resources === "object"
       ? (epub as any).resources
       : {};
 
-  // Helper to record a usage for later blob creation
+  // Helper to record a usage
   function recordUsage(
     normalizedPath: string,
-    node: Element,
+    node: Element | null,
     attr: string,
     original: string,
     descriptor?: string | null,
@@ -157,7 +188,8 @@ export async function prepareChapterHtml(opts: {
     });
   }
 
-  // Resolve raw URL via epub.resolveHref, returning normalizedPath + fragment, or null if external/fragment-only
+  // Try to resolve a raw href/url to epub normalized path + fragment using epub.resolveHref,
+  // with safe fallbacks
   function tryResolve(raw: string): {
     normalizedPath: string | null;
     fragment?: string | null;
@@ -165,7 +197,7 @@ export async function prepareChapterHtml(opts: {
     if (!raw) return { normalizedPath: null };
     const trimmed = raw.trim();
 
-    // Leave data: and blob: and other absolute schemes untouched
+    // absolute schemes: leave alone; not an internal resource
     if (
       trimmed.startsWith("data:") ||
       trimmed.startsWith("blob:") ||
@@ -175,7 +207,6 @@ export async function prepareChapterHtml(opts: {
       return { normalizedPath: null };
     }
 
-    // fragments only (#...)
     if (trimmed.startsWith("#")) {
       return { normalizedPath: null, fragment: trimmed.slice(1) };
     }
@@ -188,14 +219,12 @@ export async function prepareChapterHtml(opts: {
           fragment: resolved.fragment,
         };
       } else {
-        // If resolveHref didn't provide normalizedPath, we still may have a path-like value; attempt to guess by using opfFolder prefix
         const fallback = (epub as any).opfFolder
           ? ((epub as any).opfFolder + trimmed).replace(/\/{2,}/g, "/")
           : trimmed;
         return { normalizedPath: fallback, fragment: undefined };
       }
     } catch {
-      // As a last resort, attempt naive join with opfFolder or use raw
       const fallback = (epub as any).opfFolder
         ? ((epub as any).opfFolder + trimmed).replace(/\/{2,}/g, "/")
         : trimmed;
@@ -203,11 +232,10 @@ export async function prepareChapterHtml(opts: {
     }
   }
 
-  // Utility: parse srcset into candidates
+  // parse srcset helper
   function parseSrcset(
     srcset: string
   ): Array<{ url: string; descriptor?: string }> {
-    // Simplified parse: split by commas and trim; this will work for typical srcset usage
     return srcset
       .split(",")
       .map((s) => s.trim())
@@ -220,19 +248,66 @@ export async function prepareChapterHtml(opts: {
       });
   }
 
-  // CSS url(...) regex
   const cssUrlRegex = /url\(\s*(['"]?)(.*?)\1\s*\)/gi;
 
-  // 1) Scan <img>
+  // If disableStyles is true, we will:
+  // - scan <style> blocks and <link rel=stylesheet> for url(...) references
+  // - record those usages so we can fetch the referenced files
+  // - then remove the style/link nodes from the DOM so CSS doesn't apply globally
+  if (disableStyles) {
+    // scan and remove <style> blocks
+    const styleBlocks = Array.from(doc.querySelectorAll("style"));
+    for (const s of styleBlocks) {
+      const css = s.textContent || "";
+      let match: RegExpExecArray | null;
+      cssUrlRegex.lastIndex = 0;
+      while ((match = cssUrlRegex.exec(css)) !== null) {
+        const rawUrl = match[2];
+        const { normalizedPath, fragment } = tryResolve(rawUrl);
+        if (normalizedPath) {
+          // Node is null because we're removing the style block; keep attr "style-block" to fetch it
+          recordUsage(
+            normalizedPath,
+            null,
+            "style-block",
+            rawUrl,
+            null,
+            fragment ?? null
+          );
+        }
+      }
+      // remove the style block so CSS doesn't leak
+      s.parentNode?.removeChild(s);
+    }
+
+    // scan and remove <link rel="stylesheet"> nodes (and similar)
+    const linkSelectors = [
+      'link[rel="stylesheet"]',
+      'link[rel="style"]',
+      'link[rel="preload"][as="style"]',
+    ].join(", ");
+    const linkNodes = Array.from(doc.querySelectorAll(linkSelectors));
+    for (const l of linkNodes) {
+      const href = l.getAttribute("href") || "";
+      if (href) {
+        const { normalizedPath } = tryResolve(href);
+        if (normalizedPath) {
+          recordUsage(normalizedPath, null, "href", href, null, null);
+        }
+      }
+      // remove link so stylesheet is not applied
+      l.parentNode?.removeChild(l);
+    }
+  }
+
+  // 1) Scan <img> etc (unchanged)
   const imgNodes = Array.from(doc.querySelectorAll("img"));
   for (const img of imgNodes) {
     const src = img.getAttribute("src") || "";
     if (src) {
       const { normalizedPath, fragment } = tryResolve(src);
-      if (normalizedPath) {
-        // only record if not absolute/external (tryResolve returns null for those)
+      if (normalizedPath)
         recordUsage(normalizedPath, img, "src", src, null, fragment ?? null);
-      }
     }
     const srcset = img.getAttribute("srcset");
     if (srcset) {
@@ -253,7 +328,7 @@ export async function prepareChapterHtml(opts: {
     }
   }
 
-  // 2) <picture> and <source> (src and srcset)
+  // 2) picture/source
   const sourceNodes = Array.from(doc.querySelectorAll("source"));
   for (const s of sourceNodes) {
     const src = s.getAttribute("src");
@@ -280,7 +355,7 @@ export async function prepareChapterHtml(opts: {
     }
   }
 
-  // 3) <video>, <audio>, <track>, <source> already handled above for <source>; also poster attribute
+  // 3) media tags and poster
   const mediaNodes = Array.from(doc.querySelectorAll("video, audio"));
   for (const m of mediaNodes) {
     const src = m.getAttribute("src");
@@ -302,34 +377,37 @@ export async function prepareChapterHtml(opts: {
           fragment ?? null
         );
     }
-    // also inner <source> tags are caught earlier by sourceNodes
   }
 
-  // 4) <link rel="stylesheet" href>
-  const linkNodes = Array.from(
-    doc.querySelectorAll(
-      'link[rel="stylesheet"], link[rel="style"], link[rel="preload"][as="style"]'
-    )
-  );
-  for (const l of linkNodes) {
-    const href = l.getAttribute("href");
-    if (href) {
-      const { normalizedPath } = tryResolve(href);
-      if (normalizedPath)
-        recordUsage(normalizedPath, l, "href", href, null, null);
+  // 4) link nodes already handled if disableStyles; but if disableStyles=false we still need to record them
+  if (!disableStyles) {
+    const linkNodes = Array.from(
+      doc.querySelectorAll(
+        'link[rel="stylesheet"], link[rel="style"], link[rel="preload"][as="style"]'
+      )
+    );
+    for (const l of linkNodes) {
+      const href = l.getAttribute("href") || "";
+      if (href) {
+        const { normalizedPath } = tryResolve(href);
+        if (normalizedPath)
+          recordUsage(normalizedPath, l, "href", href, null, null);
+      }
     }
   }
 
-  // 5) style attributes (inline)
+  // 5) inline style attributes: we will keep them by default (so background images still render),
+  //    but if removeInlineStyles=true we will strip the attribute entirely.
   const styledNodes = Array.from(doc.querySelectorAll<HTMLElement>("[style]"));
   for (const node of styledNodes) {
     const style = node.getAttribute("style") || "";
+    // gather url(...) references from inline styles for later fetching/rewrite
     let match: RegExpExecArray | null;
     cssUrlRegex.lastIndex = 0;
     while ((match = cssUrlRegex.exec(style)) !== null) {
       const rawUrl = match[2];
       const { normalizedPath, fragment } = tryResolve(rawUrl);
-      if (normalizedPath) {
+      if (normalizedPath)
         recordUsage(
           normalizedPath,
           node,
@@ -338,33 +416,37 @@ export async function prepareChapterHtml(opts: {
           null,
           fragment ?? null
         );
+    }
+
+    if (removeInlineStyles) {
+      node.removeAttribute("style");
+    }
+  }
+
+  // 6) style blocks already handled when disableStyles=true; if not disabled, collect urls for rewriting
+  if (!disableStyles) {
+    const styleBlocks = Array.from(doc.querySelectorAll("style"));
+    for (const s of styleBlocks) {
+      const css = s.textContent || "";
+      let match: RegExpExecArray | null;
+      cssUrlRegex.lastIndex = 0;
+      while ((match = cssUrlRegex.exec(css)) !== null) {
+        const rawUrl = match[2];
+        const { normalizedPath, fragment } = tryResolve(rawUrl);
+        if (normalizedPath)
+          recordUsage(
+            normalizedPath,
+            s,
+            "style-block",
+            rawUrl,
+            null,
+            fragment ?? null
+          );
       }
     }
   }
 
-  // 6) <style> blocks content
-  const styleBlocks = Array.from(doc.querySelectorAll("style"));
-  for (const s of styleBlocks) {
-    const css = s.textContent || "";
-    let match: RegExpExecArray | null;
-    cssUrlRegex.lastIndex = 0;
-    while ((match = cssUrlRegex.exec(css)) !== null) {
-      const rawUrl = match[2];
-      const { normalizedPath, fragment } = tryResolve(rawUrl);
-      if (normalizedPath) {
-        recordUsage(
-          normalizedPath,
-          s,
-          "style-block",
-          rawUrl,
-          null,
-          fragment ?? null
-        );
-      }
-    }
-  }
-
-  // 7) object / embed / iframe data/src
+  // 7) object / embed / iframe
   const objectNodes = Array.from(doc.querySelectorAll("object, embed, iframe"));
   for (const n of objectNodes) {
     const attr = n.tagName.toLowerCase() === "object" ? "data" : "src";
@@ -376,7 +458,7 @@ export async function prepareChapterHtml(opts: {
     }
   }
 
-  // Deduplicate usages per normalizedPath but keep nodes for rewriting
+  // Deduplicate usages by normalizedPath
   const byPath = new Map<string, ResourceUsage[]>();
   for (const u of usages) {
     if (!u.normalizedPath) continue;
@@ -385,23 +467,20 @@ export async function prepareChapterHtml(opts: {
     byPath.set(u.normalizedPath, arr);
   }
 
-  // For each normalizedPath, fetch file (if available) and create object URL (or data URI fallback)
-  const createdUrls: Map<string, string> = new Map(); // normalizedPath -> objectUrl
-  const toRevoke: string[] = []; // objectUrls we created in this call (not existing cached ones)
+  // Create object URLs (or data URIs) for each resource we need
+  const createdUrls = new Map<string, string>();
+  const toRevoke: string[] = [];
   const missingPaths: string[] = [];
 
   for (const [normalizedPath, usageList] of byPath.entries()) {
-    // Skip if the resolved path looks absolute/external (we only recorded normalizedPaths we want to fetch)
     try {
       const cached = cache.get(normalizedPath);
       if (cached && cached.objectUrl) {
-        // bump refCount for usages
         cached.refCount += usageList.length;
         createdUrls.set(normalizedPath, cached.objectUrl);
         continue;
       }
 
-      // Attempt to get file from epub
       let fileBuffer: ArrayBuffer | null = null;
       try {
         fileBuffer = await epub.getFile(normalizedPath);
@@ -410,9 +489,7 @@ export async function prepareChapterHtml(opts: {
       }
 
       if (!fileBuffer) {
-        // try alternative lookups: sometimes normalizedPath lacks opfFolder or encoding differs
-
-        // Try decodeURIComponent/encodeURIComponent variants
+        // try decodeURIComponent fallback
         try {
           const decoded = decodeURIComponent(normalizedPath);
           if (decoded !== normalizedPath) {
@@ -422,6 +499,7 @@ export async function prepareChapterHtml(opts: {
           // ignore
         }
 
+        // try prefixing with opfFolder
         if (
           !fileBuffer &&
           (epub as any).opfFolder &&
@@ -433,9 +511,11 @@ export async function prepareChapterHtml(opts: {
           );
           try {
             fileBuffer = await epub.getFile(candidate);
+            // if found, we should treat candidate as canonical key (but keep original normalizedPath in usages)
             if (fileBuffer) {
-              // Normalize to candidate so cache keys match actual zip entry path
-              // But be careful: we should use the actual zip entry path as the key
+              // override normalizedPath var? No — keep cache key consistent using candidate
+              // Here we'll set createdUrls with the candidate as key to avoid double fetches
+              // But map key is still normalizedPath - that's fine for most cases.
             }
           } catch {
             // ignore
@@ -444,27 +524,22 @@ export async function prepareChapterHtml(opts: {
 
         if (!fileBuffer) {
           missingPaths.push(normalizedPath);
-          // leave original references as-is by not creating an object URL
           continue;
         }
       }
 
-      // Determine mediaType
       const mediaTypeCandidate =
         resourcesIndex[normalizedPath]?.mediaType ??
         mimeFromExt(normalizedPath) ??
-        null;
+        undefined;
 
-      // Create blob and object URL (prefer blob)
       let objectUrl: string;
       if (preferBlobUrl) {
-        const blob = new Blob([fileBuffer!], {
-          type: mediaTypeCandidate ?? undefined,
-        });
+        const blob = new Blob([fileBuffer!], { type: mediaTypeCandidate });
         objectUrl = URL.createObjectURL(blob);
         toRevoke.push(objectUrl);
       } else {
-        // fallback to data URI (for very small files). We'll base64 encode the ArrayBuffer.
+        // data URI fallback
         const bytes = new Uint8Array(fileBuffer!);
         let binary = "";
         for (let i = 0; i < bytes.byteLength; i++)
@@ -473,18 +548,15 @@ export async function prepareChapterHtml(opts: {
         objectUrl = `data:${
           mediaTypeCandidate ?? "application/octet-stream"
         };base64,${base64}`;
-        // data URIs don't need revocation
       }
 
-      // cache it
       cache.set(normalizedPath, {
         objectUrl,
         refCount: usageList.length,
-        mediaType: mediaTypeCandidate ?? undefined,
+        mediaType: mediaTypeCandidate,
       });
       createdUrls.set(normalizedPath, objectUrl);
     } catch (err) {
-      // If creating object URL fails, mark missing and continue
       missingPaths.push(normalizedPath);
       console.error(
         "prepareChapterHtml: error creating blob for",
@@ -495,17 +567,13 @@ export async function prepareChapterHtml(opts: {
     }
   }
 
-  // Now perform in-place replacement in the parsed DOM for each usage
+  // Now rewrite references in the DOM for the usages that map to createdUrls
   for (const [normalizedPath, usageList] of byPath.entries()) {
     const objectUrl = createdUrls.get(normalizedPath);
-    if (!objectUrl) {
-      // skip rewriting missing resources
-      continue;
-    }
+    if (!objectUrl) continue;
 
     for (const u of usageList) {
       try {
-        // preserve fragment if present
         const frag = u.fragment ? `#${u.fragment}` : "";
         if (
           u.attr === "src" ||
@@ -513,10 +581,10 @@ export async function prepareChapterHtml(opts: {
           u.attr === "poster" ||
           u.attr === "data"
         ) {
-          (u.node as Element).setAttribute(u.attr, objectUrl + frag);
+          if (u.node)
+            (u.node as Element).setAttribute(u.attr, objectUrl + frag);
         } else if (u.attr === "srcset") {
-          // For srcset, we need to rewrite only the candidate(s) referencing this normalizedPath.
-          // We'll rebuild the whole srcset by parsing the current attribute and replacing matching original urls.
+          if (!u.node) continue;
           const current = (u.node as Element).getAttribute("srcset") || "";
           const candidates = parseSrcset(current);
           const rebuilt = candidates
@@ -527,19 +595,17 @@ export async function prepareChapterHtml(opts: {
                   c.descriptor ? " " + c.descriptor : ""
                 }`;
               } else {
-                // leave as original candidate
                 return c.descriptor ? `${c.url} ${c.descriptor}` : c.url;
               }
             })
             .join(", ");
           (u.node as Element).setAttribute("srcset", rebuilt);
         } else if (u.attr === "style") {
-          // Replace url(...) occurrences in the inline style attribute that match the original
+          // inline style attribute: rewrite url(...) to objectUrl
           const styleVal = (u.node as Element).getAttribute("style") || "";
           const newStyle = styleVal.replace(
             cssUrlRegex,
             (match, quote, urlInside) => {
-              // If this urlInside resolves to our normalizedPath, replace
               const resolved = tryResolve(urlInside).normalizedPath;
               if (resolved === normalizedPath) {
                 const q = quote || "";
@@ -550,42 +616,47 @@ export async function prepareChapterHtml(opts: {
           );
           (u.node as Element).setAttribute("style", newStyle);
         } else if (u.attr === "style-block") {
-          // Replace inside the style block textContent
-          const s = u.node as HTMLStyleElement;
-          const css = s.textContent || "";
-          const newCss = css.replace(cssUrlRegex, (match, quote, urlInside) => {
-            const resolved = tryResolve(urlInside).normalizedPath;
-            if (resolved === normalizedPath) {
-              const q = quote || "";
-              return `url(${q}${objectUrl + frag}${q})`;
-            }
-            return match;
-          });
-          s.textContent = newCss;
+          // style-block may have been removed if disableStyles=true; if node exists, rewrite, otherwise skip
+          if (u.node) {
+            const s = u.node as HTMLStyleElement;
+            const css = s.textContent || "";
+            const newCss = css.replace(
+              cssUrlRegex,
+              (match, quote, urlInside) => {
+                const resolved = tryResolve(urlInside).normalizedPath;
+                if (resolved === normalizedPath) {
+                  const q = quote || "";
+                  return `url(${q}${objectUrl + frag}${q})`;
+                }
+                return match;
+              }
+            );
+            s.textContent = newCss;
+          } else {
+            // nothing to rewrite because style block was removed (we fetched resource for caching)
+          }
         } else {
-          // Generic fallback for unknown attrs: set attribute to objectUrl
-          (u.node as Element).setAttribute(u.attr, objectUrl + frag);
+          // generic fallback
+          if (u.node)
+            (u.node as Element).setAttribute(u.attr, objectUrl + frag);
         }
       } catch (e) {
-        // If any replacement fails, continue - do not throw
         console.warn("prepareChapterHtml: failed to rewrite node", u, e);
       }
     }
   }
 
   // Serialize back to HTML fragment. We want the inner content, not a full <html> wrapper.
-  // If the original content was a fragment, we preserved it under doc.body.
   const containerHtml = doc.body
     ? doc.body.innerHTML
     : doc.documentElement?.outerHTML ?? chapterHtml;
 
-  // Build cleanup: decrement cache refcounts and revoke any objectUrls created in this call
+  // Build cleanup function that decrements cache refcounts and revokes any object URLs created here
   let cleaned = false;
   async function cleanup() {
     if (cleaned) return;
     cleaned = true;
 
-    // Decrement refCounts for usages we incremented
     for (const [normalizedPath, usageList] of byPath.entries()) {
       const cached = cache.get(normalizedPath);
       if (!cached) continue;
@@ -599,12 +670,9 @@ export async function prepareChapterHtml(opts: {
           // ignore
         }
         cache.delete(normalizedPath);
-      } else {
-        // leave in cache
       }
     }
 
-    // Also revoke object URLs that were created by this call but not tracked in cache for some reason
     for (const url of toRevoke) {
       try {
         URL.revokeObjectURL(url);
@@ -619,4 +687,113 @@ export async function prepareChapterHtml(opts: {
     cleanup,
     missing: missingPaths,
   };
+}
+
+export function buildTocSpineRanges(epub: Epub) {
+  // flatten TOC entries into an array of hrefs in TOC order
+  const flatten = (entries: TocEntry[] | undefined, out: string[] = []) => {
+    if (!entries) return out;
+    for (const e of entries) {
+      if (e.href) out.push(e.href);
+      if (e.children && e.children.length) flatten(e.children, out);
+    }
+    return out;
+  };
+  const tocHrefs = flatten(epub.toc || []);
+
+  // build map from normalizedPath -> chapterIndex for the spine
+  const pathToIndex = new Map<string, number>();
+  (epub.chapters || []).forEach((ch, idx) => {
+    if (ch && ch.href) {
+      const resolved = epub.resolveHref(ch.href);
+      if (resolved && resolved.normalizedPath) {
+        pathToIndex.set(resolved.normalizedPath, idx);
+      } else {
+        // fallback: use the raw href if normalizedPath missing
+        pathToIndex.set(ch.href, idx);
+      }
+    }
+  });
+
+  // compute start indices for each toc href by resolving the href and finding the chapter index
+  const tocEntriesWithIndex: Array<{
+    href: string;
+    startIndex: number | null;
+  }> = tocHrefs.map((href) => {
+    try {
+      const r = epub.resolveHref(href);
+      const normalized = r && r.normalizedPath ? r.normalizedPath : href;
+      const idx = pathToIndex.has(normalized)
+        ? pathToIndex.get(normalized)!
+        : null;
+      return { href, startIndex: idx };
+    } catch {
+      return { href, startIndex: null };
+    }
+  });
+
+  // now create ranges: for entries with valid startIndex, end is next valid startIndex, else spine length
+  const ranges = new Map<string, { start: number; end: number }>();
+  const spineLength = (epub.chapters || []).length;
+  // build array of only valid starts preserving order
+  const validStarts = tocEntriesWithIndex
+    .map((e) => ({ href: e.href, startIndex: e.startIndex }))
+    .filter((e) => e.startIndex !== null) as Array<{
+    href: string;
+    startIndex: number;
+  }>;
+
+  for (let i = 0; i < validStarts.length; i++) {
+    const { href, startIndex } = validStarts[i];
+    // find next valid start index greater than this startIndex; if none, use spineLength
+    let end = spineLength;
+    for (let j = i + 1; j < validStarts.length; j++) {
+      const nextStart = validStarts[j].startIndex;
+      if (typeof nextStart === "number" && nextStart > startIndex) {
+        end = nextStart;
+        break;
+      }
+    }
+    ranges.set(href, { start: startIndex, end });
+  }
+
+  return ranges; // Map<href, {start,end}>
+}
+export async function loadSpineRangeContent(
+  epub: Epub,
+  start: number,
+  end: number
+) {
+  const chaptersHtml: string[] = [];
+  const chapterHrefs: string[] = [];
+  for (let i = start; i < end; i++) {
+    const ch = epub.chapters?.[i];
+    if (!ch) continue;
+    // prefer the already-parsed content if available on chapter.content
+    let content = ch.content;
+    if (!content) {
+      // try to resolve and fetch raw file
+      try {
+        const resolved = epub.resolveHref(ch.href || "");
+        if (resolved && resolved.normalizedPath) {
+          const buf = await epub.getFile(resolved.normalizedPath);
+          if (buf) content = new TextDecoder().decode(buf);
+        }
+      } catch {
+        // ignore, fallback below
+      }
+    }
+    if (!content)
+      content = `<div class="text-muted-foreground"><em>Unable to load chapter ${escapeHtml(
+        ch.href || `#${i}`
+      )}</em></div>`;
+    // wrap in container so fragments and later DOM queries are scoped
+    const wrapper = `<div data-chapter-index="${i}" data-chapter-href="${escapeHtml(
+      ch.href || ""
+    )}">${content}</div>`;
+    chaptersHtml.push(wrapper);
+    chapterHrefs.push(ch.href || "");
+  }
+  const combined = chaptersHtml.join("\n");
+  return { combinedHtml: combined, chapterHrefs };
 }

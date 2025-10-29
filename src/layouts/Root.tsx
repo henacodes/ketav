@@ -2,6 +2,7 @@ import BookSummaryDialog from "@/components/dialogs/BookSummaryDialog";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import useSettingsStore from "@/stores/useSettingsStore";
 import {
   BookOpen,
   Flame,
@@ -11,7 +12,7 @@ import {
   Target,
   TestTubeDiagonal,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 
 export default function RootLayout() {
@@ -25,6 +26,15 @@ export default function RootLayout() {
     { path: "/settings", label: "Settings", icon: Settings },
   ];
 
+  const fetchSettings = useSettingsStore((store) => store.fetchSettings);
+
+  useEffect(() => {
+    async function init() {
+      await fetchSettings();
+    }
+
+    init();
+  }, []);
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <main className="flex-1 flex flex-col">
