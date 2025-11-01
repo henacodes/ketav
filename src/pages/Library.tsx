@@ -9,11 +9,18 @@ import { fetchAllDbBooks } from "@/db/services/books.services";
 import { useBookCovers } from "@/hooks/useBookCover";
 import { Book } from "@/db/schema";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 
 export function LibraryPage() {
   const [libraryBooks, setLibraryBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
   const { settings } = useSettingsStore((state) => state);
+
+  const [syncProgress, setSyncProgress] = useState({
+    totalBooks: 0,
+    currentSyncedBooksCount: 0,
+  });
+  const [currentLoadingBook, setCurrentLoadingBook] = useState("");
 
   const coverImages = useBookCovers(libraryBooks, "image/jpeg");
 
@@ -36,7 +43,11 @@ export function LibraryPage() {
   async function syncAndFetchBooks() {
     setLoading(true);
     try {
-      await syncBooksInFileSystemWithDb({ settings });
+      await syncBooksInFileSystemWithDb({
+        settings,
+        setCurrentLoadingBook,
+        setSyncProgress,
+      });
       const booksInDb = await fetchAllDbBooks();
       setLibraryBooks(booksInDb);
     } catch (error) {
@@ -72,6 +83,21 @@ export function LibraryPage() {
           Sync Library
         </Button>
       </div>
+
+      {loading && (
+        <div>
+          <Progress
+            value={
+              (syncProgress.currentSyncedBooksCount / syncProgress.totalBooks) *
+              100
+            }
+            className="h-2"
+          />
+          <small className=" text-muted-foreground ">
+            Processing:{currentLoadingBook}
+          </small>
+        </div>
+      )}
 
       {libraryBooks.length === 0 && !loading && (
         <p className="text-gray-500 flex items-center">

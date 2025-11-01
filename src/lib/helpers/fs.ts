@@ -42,8 +42,17 @@ export function getFileExtension(fileName: string): string | null {
 
 export async function syncBooksInFileSystemWithDb({
   settings,
+  setCurrentLoadingBook,
+  setSyncProgress,
 }: {
   settings: Settings | null;
+  setSyncProgress: React.Dispatch<
+    React.SetStateAction<{
+      totalBooks: number;
+      currentSyncedBooksCount: number;
+    }>
+  >;
+  setCurrentLoadingBook: React.Dispatch<React.SetStateAction<string>>;
 }) {
   try {
     if (!settings?.libraryFolderPath) return;
@@ -52,6 +61,8 @@ export async function syncBooksInFileSystemWithDb({
     const entries = await readDir(settings.libraryFolderPath, {
       baseDir: BaseDirectory.Document,
     });
+
+    setSyncProgress({ totalBooks: entries.length, currentSyncedBooksCount: 0 });
 
     // 1) Process EPUBs (existing flow)
     const filteredEpubFiles = filterEpubFiles(entries);
@@ -71,13 +82,22 @@ export async function syncBooksInFileSystemWithDb({
           }
         }
 
-        await registerBook({
-          title: epub.title || epub.fileName || "",
-          author: epub.author || "",
-          bookId,
-          coverImagePath: imgPath,
-          fileName: epub.fileName,
-        });
+        setCurrentLoadingBook(epub.title || epub.fileName);
+
+        try {
+          await registerBook({
+            title: epub.title || epub.fileName || "",
+            author: epub.author || "",
+            bookId,
+            coverImagePath: imgPath,
+            fileName: epub.fileName,
+          });
+        } finally {
+          setSyncProgress((p) => ({
+            ...p,
+            currentSyncedBooksCount: p.currentSyncedBooksCount + 1,
+          }));
+        }
       } catch (err) {
         console.error("Failed to register epub", epub.fileName, err);
       }
@@ -117,23 +137,33 @@ export async function syncBooksInFileSystemWithDb({
         // generate a stable bookId (you may want to use pdf metadata or filename)
 
         // Reuse the same generateBookId function so IDs are consistent with your existing scheme
-        const bookId = generateEpubBookId(
-          Object.fromEntries(
+        const bookId = generateEpubBookId({
+          ...Object.fromEntries(
             Object.entries(metadata).map(([key, value]) => [
               key,
               value ?? undefined,
             ])
-          )
-        );
-
-        await registerBook({
-          title: metadata.title ?? e.name,
-          author: metadata.author ?? "",
-          pages: metadata.pages,
-          bookId,
-          coverImagePath: imgPath,
+          ),
           fileName: e.name,
         });
+
+        setCurrentLoadingBook(metadata.title || e.name);
+
+        try {
+          await registerBook({
+            title: metadata.title ?? e.name,
+            author: metadata.author ?? "",
+            pages: metadata.pages,
+            bookId,
+            coverImagePath: imgPath,
+            fileName: e.name,
+          });
+        } finally {
+          setSyncProgress((p) => ({
+            ...p,
+            currentSyncedBooksCount: p.currentSyncedBooksCount + 1,
+          }));
+        }
       } catch (err) {
         console.error("Failed to process PDF", e.name, err);
       }

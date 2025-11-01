@@ -43,14 +43,15 @@ export default function PdfReader({
   const { addLastOpenedPage, findLastOpenedPage } = useHistoryStore();
 
   useReadingTracker({
-    bookId: generateBookId(
-      Object.fromEntries(
+    bookId: generateBookId({
+      ...Object.fromEntries(
         Object.entries(openBook.metadata).map(([key, value]) => [
           key,
           value ?? undefined,
         ])
-      )
-    ),
+      ),
+      fileName: openBook.metadata.fileName,
+    }),
   });
 
   // Load file data
