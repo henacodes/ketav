@@ -43,7 +43,7 @@ export function generateBookId({
   fileName,
   pages,
 }: BookIdParams): string {
-  title = title || `${fileName}` + `${cover}` + `${pages}`; // fallback to chapter and TOC length
+  title = (title || `${fileName}`) + `${cover || ""}` + `${pages || ""}`; // fallback to chapter and TOC length
   author = author || "";
   const normalize = (str: string) =>
     str
