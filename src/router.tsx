@@ -6,6 +6,7 @@ import { StreakPage } from "./pages/Streak";
 import RootLayout from "./layouts/Root";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GoalsPage } from "./pages/Goals";
+import { CollectionsPage } from "./pages/Collections";
 
 export const router = createBrowserRouter([
   {
@@ -20,6 +21,10 @@ export const router = createBrowserRouter([
       {
         path: "library",
         element: <LibraryPage />,
+      },
+      {
+        path: "collections",
+        element: <CollectionsPage />,
       },
       {
         path: "settings",

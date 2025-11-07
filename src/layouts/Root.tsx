@@ -6,6 +6,7 @@ import { useHistoryStore } from "@/stores/useHistoryStore";
 import useSettingsStore from "@/stores/useSettingsStore";
 import {
   BookOpen,
+  BookOpenText,
   Flame,
   Library,
   Menu,
@@ -21,7 +22,8 @@ export default function RootLayout() {
   const location = useLocation();
   const menuItems = [
     { path: "/", label: "Home", icon: BookOpen },
-    { path: "/library", label: "Library", icon: Library },
+    { path: "/library", label: "Library", icon: BookOpenText },
+    { path: "/collections", label: "Collections", icon: Library },
     { path: "/streak", label: "Streak", icon: Flame },
     { path: "/goals", label: "Goals", icon: Target },
     { path: "/settings", label: "Settings", icon: Settings },

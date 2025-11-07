@@ -39,6 +39,12 @@ pub fn run() {
             sql: include_str!("../migrations/0004_numerous_vermin.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 6,
+            description: "add_collection_table",
+            sql: include_str!("../migrations/0005_optimal_prism.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::Builder::new().build())
